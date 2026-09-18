@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AasPass — Platform Decision Tree (DT)</title>
+<style>
+  :root{
+    --primary:#1F6F4A;
+    --primary-dark:#154A32;
+    --accent:#D97B3F;
+    --bg:#F6F9F7;
+    --panel:#FFFFFF;
+    --border:#DCE6DF;
+    --text:#1C2321;
+    --gray:#5B6660;
+    --gray-light:#8A948E;
+    --p1:#B00020;
+    --p2:#D97B3F;
+    --p3:#3D7A5C;
+    --p4:#8A948E;
+    --confirmed:#1F6F4A;
+    --proposed:#B37A2E;
+    --optional:#8A6D3B;
+    --tbd:#B00020;
+    --legal:#B00020;
+    --escalate:#3B5A7A;
+    --tat:#CFE0D6;
+    --plat-customer:#1F6F4A;
+    --plat-vendor:#8A5A2E;
+    --plat-delivery:#2E5C8A;
+    --shadow: 0 1px 3px rgba(21,74,50,0.08), 0 1px 2px rgba(21,74,50,0.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family: -apple-system, "Segoe UI", ui-sans-serif, system-ui, Roboto, Helvetica, Arial, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    gap:22px;
+    padding:14px 24px;
+    background:var(--primary-dark);
+    color:#fff;
+    flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:center; gap:10px; white-space:nowrap;}
+  .brand-mark{
+    width:30px; height:30px; border-radius:8px; background:linear-gradient(135deg,#2E8B5C,#154A32);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    box-shadow:0 1px 4px rgba(0,0,0,0.25);
+  }
+  .brand-mark svg{width:17px; height:17px;}
+  .brand .name{font-family: Georgia, "Cambria", "Times New Roman", serif; font-weight:700; font-size:22px;}
+  .brand .sub{font-size:12.5px; color:#BFE0CE;}
+  .dt-title{font-size:14px; color:#DCEFE4; border-left:1px solid #3A6E56; padding-left:18px; white-space:nowrap;}
+  .search-wrap{flex:1; min-width:220px; position:relative;}
+  #search{
+    width:100%; padding:10px 14px 10px 38px; border-radius:8px; border:1px solid #2F5F49;
+    background:#245C42; color:#fff; font-size:14px; outline:none;
+    transition:box-shadow .15s ease, background .15s ease;
+  }
+  #search::placeholder{color:#A9CEBB;}
+  #search:focus{background:#1E4E38; box-shadow:0 0 0 3px rgba(217,123,63,0.45);}
+  .search-icon{position:absolute; left:12px; top:50%; transform:translateY(-50%); width:15px; height:15px; border:2px solid #A9CEBB; border-radius:50%; pointer-events:none;}
+  .search-icon::after{content:""; position:absolute; width:2px; height:8px; background:#A9CEBB; right:-5px; bottom:-6px; transform:rotate(45deg);}
+
+  .tabs{
+    display:flex; gap:0; background:#EEF5F0; border-bottom:1px solid var(--border); padding:0 24px;
+  }
+  .tab{
+    padding:12px 20px; font-size:13.5px; font-weight:600; color:var(--gray); cursor:pointer;
+    border-bottom:3px solid transparent; display:flex; align-items:center; gap:8px;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .tab .dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+  .tab .count{font-weight:400; color:var(--gray-light); font-size:12px; margin-left:2px;}
+  .tab:hover{color:var(--primary-dark);}
+  .tab.active{color:var(--primary-dark); border-bottom:3px solid var(--accent);}
+
+  .statsbar{display:flex; gap:26px; padding:9px 24px; background:#fff; border-bottom:1px solid var(--border); font-size:12px; color:var(--gray); flex-wrap:wrap;}
+  .statsbar b{color:var(--primary-dark); font-weight:700;}
+  .statsbar .sep{color:var(--border);}
+
+  .chips{display:flex; gap:8px; padding:10px 24px; background:#EEF5F0; border-bottom:1px solid var(--border); align-items:center; flex-wrap:wrap;}
+  .chips .label{font-size:12px; color:var(--gray); margin-right:4px;}
+  .chip{border:1px solid var(--primary); color:var(--primary-dark); background:#fff; border-radius:999px; padding:5px 13px; font-size:12.5px; font-weight:600; cursor:pointer; margin-right:6px; transition:background .12s ease, color .12s ease;}
+  .chip:hover{background:var(--primary); color:#fff;}
+
+  .layout{display:flex; flex:1; min-height:0;}
+  .sidebar{width:310px; min-width:250px; background:var(--panel); border-right:1px solid var(--border); overflow-y:auto; padding:10px 0 30px;}
+  .group-title{font-size:11.5px; font-weight:700; color:var(--primary-dark); padding:14px 18px 6px; letter-spacing:.3px; text-transform:uppercase;}
+  .group-title .plat{color:var(--accent); margin-right:5px;}
+  .item{display:flex; align-items:center; gap:0; padding:8px 18px 8px 22px; cursor:pointer; border-left:3px solid transparent; font-size:13.2px;}
+  .item .kind-dot{width:6px; height:6px; border-radius:50%; margin-right:9px; flex-shrink:0;}
+  .item .kind-dot.ticket{background:var(--accent);}
+  .item .kind-dot.process{background:var(--primary);}
+  .item:hover{background:#EEF5F0;}
+  .item.active{background:#E6F1EA; border-left:3px solid var(--accent);}
+  .item .code{font-weight:700; color:var(--primary); min-width:52px; margin-right:8px; font-size:12.5px; display:none;}
+  .item .label{color:var(--text);}
+  .item .alias-badge{margin-left:8px; font-size:10px; font-weight:700; color:var(--accent); border:1px solid var(--accent); border-radius:4px; padding:1px 5px;}
+  .item.hidden{display:none;}
+  .group.hidden{display:none;}
+  .no-results{padding:18px 22px; color:var(--gray); font-size:13.5px; display:none;}
+
+  main{flex:1; overflow-y:auto; padding:30px 40px 60px;}
+  .welcome{max-width:680px; margin-top:30px;}
+  .welcome h1{font-family:Georgia, "Cambria", serif; font-size:25px; color:var(--primary-dark); margin-bottom:8px;}
+  .welcome p{color:var(--gray); font-size:14.5px; line-height:1.6;}
+  .welcome ul{color:var(--gray); font-size:14px; line-height:1.7;}
+  .platform-cards{display:flex; gap:14px; margin-top:22px; flex-wrap:wrap;}
+  .pcard{flex:1; min-width:180px; background:#fff; border:1px solid var(--border); border-left:4px solid var(--primary); border-radius:8px; padding:14px 16px; cursor:pointer; transition:box-shadow .15s ease, transform .1s ease;}
+  .pcard:hover{box-shadow:var(--shadow); transform:translateY(-1px);}
+  .pcard h4{margin:0 0 6px; font-size:14px; color:var(--primary-dark);}
+  .pcard p{margin:0; font-size:12.5px; color:var(--gray); line-height:1.5;}
+
+  .card{max-width:780px; display:none; background:#fff; border:1px solid var(--border); border-radius:10px; padding:26px 30px; box-shadow:var(--shadow);}
+  .card.visible{display:block;}
+  .card-head{display:flex; align-items:flex-start; justify-content:space-between; gap:18px; border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:18px;}
+  .card-head .code-big{font-size:30px; font-weight:800; color:var(--primary); line-height:1;}
+  .card-head .full-name{font-size:15.5px; color:var(--gray); margin-top:4px;}
+  .breadcrumb{font-size:12px; color:var(--gray-light); margin-bottom:4px;}
+  .breadcrumb .crumb{cursor:pointer; text-decoration:none;}
+  .breadcrumb .crumb:hover{color:var(--primary); text-decoration:underline;}
+  .tags{display:flex; gap:8px; flex-wrap:wrap;}
+  .tag{font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:5px; color:#fff; white-space:nowrap; margin-right:6px;}
+  .tag.p1{background:var(--p1);} .tag.p2{background:var(--p2);} .tag.p3{background:var(--p3);} .tag.p4{background:var(--p4);}
+  .tag.confirmed{background:var(--confirmed);} .tag.proposed{background:var(--proposed);}
+  .tag.optional{background:var(--optional);} .tag.tbd{background:var(--tbd);} .tag.legal{background:var(--legal);}
+  .tag.platform{background:var(--primary-dark);}
+  .tag.escalate{background:var(--escalate);} .tag.tat{background:var(--tat); color:#2A2A2A;}
+
+  .section{margin-bottom:20px;}
+  .section h3{font-size:12px; font-weight:700; color:var(--primary-dark); margin:0 0 8px; text-transform:uppercase; letter-spacing:.2px;}
+  .section .body{font-size:14.5px; line-height:1.55; color:var(--text); background:var(--bg); border:1px solid var(--border); border-left:3px solid var(--primary); border-radius:6px; padding:12px 16px;}
+  .section .body.escalation{border-left-color:var(--accent);}
+  .section ul{margin:0; padding-left:18px;}
+  .section li{margin-bottom:4px;}
+
+  .related-wrap{border-top:1px solid var(--border); padding-top:16px; margin-top:6px;}
+  .related-wrap h3{font-size:12px; font-weight:700; color:var(--primary-dark); margin:0 0 10px; text-transform:uppercase; letter-spacing:.2px;}
+  .related-pill{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); background:var(--bg); border-radius:999px; padding:6px 13px; font-size:12.5px; color:var(--text); cursor:pointer; margin:0 8px 8px 0; transition:border-color .12s ease, background .12s ease;}
+  .related-pill:hover{border-color:var(--primary); background:#E6F1EA;}
+  .related-pill .plat-dot{width:7px; height:7px; border-radius:50%; display:inline-block;}
+
+  footer{padding:14px 24px; background:#EEF5F0; border-top:1px solid var(--border); font-size:11.5px; color:var(--gray); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;}
+  footer .legend{display:flex; gap:12px; flex-wrap:wrap;}
+  footer .legend span{display:flex; align-items:center; gap:5px;}
+  footer .dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+
+  .home-screen{display:none; max-width:920px;}
+  .hero{padding:8px 0 30px;}
+  .hero h1{font-family:Georgia,"Cambria",serif; font-size:34px; color:var(--primary-dark); margin:0 0 8px;}
+  .hero .tagline{font-family:Georgia,"Cambria",serif; font-style:italic; color:var(--accent); font-size:18px; margin-bottom:14px;}
+  .hero p{font-size:15px; color:var(--gray); line-height:1.65; max-width:760px;}
+  .home-section{margin-bottom:34px;}
+  .home-section h2{font-size:13px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.5px; margin:0 0 14px;}
+  .info-grid{display:flex; gap:16px; flex-wrap:wrap;}
+  .info-card{flex:1; min-width:220px; background:#fff; border:1px solid var(--border); border-radius:10px; padding:18px 20px; box-shadow:var(--shadow);}
+  .info-card h3{margin:0 0 8px; font-size:15px; color:var(--primary-dark);}
+  .info-card p{margin:0; font-size:13.5px; color:var(--gray); line-height:1.6;}
+  .leader-card{display:flex; gap:16px; align-items:center; background:#fff; border:1px dashed var(--border); border-radius:10px; padding:18px 20px;}
+  .leader-avatar{width:56px; height:56px; border-radius:50%; background:var(--bg); border:1px dashed var(--gray-light); display:flex; align-items:center; justify-content:center; color:var(--gray-light); font-size:22px; flex-shrink:0;}
+  .leader-card .placeholder-label{display:inline-block; margin-top:6px; font-size:10.5px; font-weight:700; color:var(--proposed); border:1px solid var(--proposed); border-radius:4px; padding:1px 6px;}
+  .steps-list{counter-reset:step; list-style:none; margin:0; padding:0;}
+  .steps-list li{counter-increment:step; position:relative; padding-left:38px; margin-bottom:16px; font-size:14px; color:var(--text); line-height:1.6;}
+  .steps-list li::before{content:counter(step); position:absolute; left:0; top:0; width:26px; height:26px; border-radius:50%; background:var(--primary); color:#fff; font-weight:700; font-size:12.5px; display:flex; align-items:center; justify-content:center;}
+  .steps-list li b{color:var(--primary-dark);}
+  .ref-list{list-style:none; margin:0; padding:0;}
+  .ref-list li{background:#fff; border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin-bottom:10px; font-size:13.5px; display:flex; justify-content:space-between; align-items:baseline; gap:14px; flex-wrap:wrap;}
+  .ref-list li .ref-name{font-weight:700; color:var(--primary-dark);}
+  .ref-list li .ref-desc{color:var(--gray); flex:1; min-width:220px;}
+  .reco-list{margin:0; padding-left:20px; font-size:13.5px; color:var(--text); line-height:1.8;}
+  .home-cta{margin-top:8px;}
+  .home-cta button{background:var(--primary); color:#fff; border:none; border-radius:8px; padding:11px 22px; font-size:13.5px; font-weight:600; cursor:pointer;}
+  .home-cta button:hover{background:var(--primary-dark);}
+
+  /* Chat assistant */
+  .chat-fab{
+    position:fixed; bottom:24px; right:24px; width:58px; height:58px; border-radius:50%;
+    background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; box-shadow:0 3px 12px rgba(21,74,50,0.35); z-index:1000; transition:transform .15s ease;
+  }
+  .chat-fab:hover{transform:scale(1.06);}
+  .chat-fab svg{width:26px; height:26px;}
+
+  .chat-panel{
+    position:fixed; bottom:94px; right:24px; width:380px; max-width:92vw; height:560px; max-height:75vh;
+    background:#fff; border-radius:14px; box-shadow:0 8px 32px rgba(21,74,50,0.28); border:1px solid var(--border);
+    display:none; flex-direction:column; overflow:hidden; z-index:1000;
+  }
+  .chat-panel.open{display:flex;}
+  .chat-header{background:var(--primary-dark); color:#fff; padding:14px 16px; display:flex; align-items:center; justify-content:space-between;}
+  .chat-header .title{font-weight:700; font-size:14.5px;}
+  .chat-header .subtitle{font-size:11px; color:#BFE0CE; margin-top:2px;}
+  .chat-header .chat-close{cursor:pointer; font-size:20px; line-height:1; opacity:.85; padding:2px 6px;}
+  .chat-header .chat-close:hover{opacity:1;}
+  .chat-messages{flex:1; overflow-y:auto; padding:14px; background:var(--bg); display:flex; flex-direction:column; gap:10px;}
+  .chat-msg{max-width:88%; font-size:13px; line-height:1.55; padding:10px 13px; border-radius:12px;}
+  .chat-msg.user{align-self:flex-end; background:var(--primary); color:#fff; border-bottom-right-radius:3px;}
+  .chat-msg.bot{align-self:flex-start; background:#fff; border:1px solid var(--border); color:var(--text); border-bottom-left-radius:3px;}
+  .chat-msg.bot b{color:var(--primary-dark);}
+  .chat-msg .chat-section-label{display:block; font-size:10.5px; font-weight:700; color:var(--primary-dark); text-transform:uppercase; letter-spacing:.2px; margin:8px 0 3px;}
+  .chat-msg .chat-section-label:first-child{margin-top:0;}
+  .chat-msg .chat-quote{background:var(--bg); border-left:3px solid var(--accent); padding:6px 10px; border-radius:4px; font-style:italic; margin-top:2px;}
+  .chat-view-btn{display:inline-block; margin-top:10px; background:var(--primary); color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:11.5px; font-weight:600; cursor:pointer;}
+  .chat-view-btn:hover{background:var(--primary-dark);}
+  .chat-sugg-btn{display:block; width:100%; text-align:left; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px 11px; font-size:12.5px; color:var(--text); cursor:pointer; margin-top:6px;}
+  .chat-sugg-btn:hover{border-color:var(--primary); background:#E6F1EA;}
+  .chat-input-row{display:flex; gap:8px; padding:12px; border-top:1px solid var(--border); background:#fff;}
+  .chat-input-row input{flex:1; border:1px solid var(--border); border-radius:20px; padding:9px 14px; font-size:13px; outline:none;}
+  .chat-input-row input:focus{border-color:var(--primary);}
+  .chat-input-row button{background:var(--primary); color:#fff; border:none; border-radius:20px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer;}
+  .chat-input-row button:hover{background:var(--primary-dark);}
+  .chat-disclaimer{font-size:10px; color:var(--gray-light); padding:0 14px 10px; text-align:center;}
+
+  @media (max-width: 760px){
+    .layout{flex-direction:column;}
+    .sidebar{width:100%; max-height:260px; border-right:none; border-bottom:1px solid var(--border);}
+    main{padding:20px;}
+  }
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C7.6 2 4 5.6 4 10c0 6 8 12 8 12s8-6 8-12c0-4.4-3.6-8-8-8z" fill="#EAF5EE"/><circle cx="12" cy="10" r="3" fill="#154A32"/></svg></span>
+    <span class="name">AasPass</span><span class="sub">Jo chahiye, aas-paas se.</span>
+  </div>
+  <div class="dt-title">Platform Decision Tree (DT)</div>
+  <div class="search-wrap">
+    <span class="search-icon"></span>
+    <input id="search" type="text" placeholder="Search anything — WIMO, vendor payout, delivery COD... (press / to focus, Esc to clear)" autocomplete="off">
+  </div>
+</div>
+
+<div class="tabs" id="tabs"></div>
+<div class="statsbar" id="statsbar"></div>
+
+<div class="chips" id="chips">
+  <span class="label">Quick jump:</span>
+</div>
+
+<div class="layout">
+  <div class="sidebar" id="sidebar"></div>
+  <main id="main">
+    <div class="welcome" id="welcome">
+      <h1>Search, or pick a query from the left</h1>
+      <p>This DT covers every AasPass platform in one place — Customer, Vendor, and Delivery Partner — built from the Business Operations &amp; SOP Master Manual and the main PDR. Use the tabs to browse one platform, or search across all three at once.</p>
+      <div class="platform-cards">
+        <div class="pcard" data-goto="customer" style="border-left-color:var(--plat-customer);"><h4>Customer</h4><p>Order issues, payments, refunds, account &amp; app support — 15 categories.</p></div>
+        <div class="pcard" data-goto="vendor" style="border-left-color:var(--plat-vendor);"><h4>Vendor</h4><p>Onboarding, catalog, orders, subscription, settlement, account status — 14 topics.</p></div>
+        <div class="pcard" data-goto="delivery" style="border-left-color:var(--plat-delivery);"><h4>Delivery Partner</h4><p>Registration, assignment, delivery execution, earnings, safety — 18 topics.</p></div>
+      </div>
+      <ul style="margin-top:20px;">
+        <li>Codes and steps tagged <strong>LOCKED/CONFIRMED</strong> are stated directly in the source documents.</li>
+        <li><strong>PROPOSED / OPTIONAL / TBD / LEGAL/FINANCE REVIEW</strong> tags mean exactly what they say — see the footer legend.</li>
+      </ul>
+    </div>
+    <div class="card" id="card"></div>
+    <div class="home-screen" id="homeScreen" style="display:none;"></div>
+  </main>
+</div>
+
+<footer>
+  <div class="legend">
+    <span><span class="dot" style="background:var(--confirmed)"></span> LOCKED/CONFIRMED</span>
+    <span><span class="dot" style="background:var(--proposed)"></span> PROPOSED</span>
+    <span><span class="dot" style="background:var(--optional)"></span> OPTIONAL</span>
+    <span><span class="dot" style="background:var(--tbd)"></span> TBD</span>
+    <span><span class="dot" style="background:var(--legal)"></span> LEGAL/FINANCE REVIEW</span>
+  </div>
+  <div>Source: AasPass PDR (corrected) · Business Operations &amp; SOP Master Manual · Prepared by: Leo</div>
+</footer>
+
+<div class="chat-fab" id="chatFab" title="Ask the AasPass DT Assistant">
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4h16v12H8l-4 4V4z" stroke="#fff" stroke-width="2" stroke-linejoin="round" fill="none"/><circle cx="9" cy="10" r="1" fill="#fff"/><circle cx="12" cy="10" r="1" fill="#fff"/><circle cx="15" cy="10" r="1" fill="#fff"/></svg>
+</div>
+
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header">
+    <div><div class="title">AasPass DT Assistant</div><div class="subtitle">Searches this DT for you</div></div>
+    <div class="chat-close" id="chatClose">&times;</div>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-disclaimer">Keyword search over this DT's own content &mdash; not a live AI. Always verify against the full entry before acting.</div>
+  <div class="chat-input-row">
+    <input type="text" id="chatInput" placeholder="e.g. customer says order not received" autocomplete="off">
+    <button id="chatSend">Send</button>
+  </div>
+</div>
+
+<script>
+var PLATFORMS = [
+  {id:"customer", label:"Customer"},
+  {id:"vendor", label:"Vendor"},
+  {id:"delivery", label:"Delivery Partner"}
+];
+
+var CATEGORY_ORDER = {
+  customer: ["Orders","Vendor & Delivery","Payments","Account & App","General"],
+  vendor: ["Onboarding","Catalog & Inventory","Orders","Subscription & Payments","Support Issues","Account Status"],
+  delivery: ["Registration","Availability & Assignment","Delivery Execution","Earnings & Payouts","Issues & Safety"]
+};
+
+var QUICK_JUMP = ["WIMO","VSUB","DEARN","RF","DFAIL","VORD"];
+
+/* ============ CUSTOMER (15) ============ */
+var CUSTOMER_DATA = [
+  { code:"WIMO", name:"Order Not Received", platform:"customer", category:"Orders", kind:"ticket",
+    keywords:["where is my order","order not received","order missing","not delivered"],
+    priority:"p2", priorityLabel:"P2 \u2014 High", status:"confirmed",
+    firstResponse:"Acknowledge within SLA.",
+    infoToCollect:["Order ID","Delivery status shown in-app"],
+    action:"Check delivery state machine status; contact delivery partner.",
+    escalation:"Escalate to Ops if delivery partner unreachable; resolve via redelivery or refund.",
+    escalateTo:"Ops", alias:"WIMO",
+    shareMessage:"We're checking with your delivery partner now and will update you shortly \u2014 if we can't reach them, we'll arrange redelivery or a refund." ,
+    related:["DASSIGN","DFAIL","VDEL"] },
+  { code:"LD", name:"Late Delivery", platform:"customer", category:"Orders", kind:"ticket",
+    keywords:["late delivery","delayed order","taking too long"],
+    priority:"p2", priorityLabel:"P2 \u2014 High", status:"confirmed",
+    firstResponse:"Acknowledge, share current status.",
+    infoToCollect:["Order ID","Expected vs. actual time"],
+    action:"Check delivery partner location/status.",
+    escalation:"Escalate to Delivery Manager if pattern repeats for same partner/zone.",
+    escalateTo:"Delivery Manager",
+    shareMessage:"Your order is on its way \u2014 it's running later than expected and we're tracking it with the delivery partner now." ,
+    related:["DASSIGN","DACC"] },
+  { code:"WI", name:"Wrong Item", platform:"customer", category:"Orders", kind:"ticket",
+    keywords:["wrong item","incorrect item","different product"],
+    priority:"p3", priorityLabel:"P3 \u2014 Normal", status:"confirmed",
+    firstResponse:"Apologize, request photo if available.",
+    infoToCollect:["Order ID","Item ordered vs. received"],
+    action:"Verify with vendor.",
+    escalation:"Offer refund/replacement per Admin-configured refund rules.",
+    escalateTo:"Self-resolve (refund rules)",
+    shareMessage:"Sorry about that \u2014 we'll arrange a refund or replacement for the incorrect item." },
+  { code:"MI", name:"Missing Item", platform:"customer", category:"Orders", kind:"ticket",
+    keywords:["missing item","item not in order","incomplete order"],
+    priority:"p3", priorityLabel:"P3 \u2014 Normal", status:"confirmed",
+    firstResponse:"Apologize, confirm item(s) missing.",
+    infoToCollect:["Order ID","Missing item(s)"],
+    action:"Verify with vendor and delivery partner.",
+    escalation:"Partial refund per Admin-configured rules.",
+    escalateTo:"Self-resolve (refund rules)",
+    shareMessage:"Sorry for the missing item \u2014 we're processing a partial refund for it." },
+  { code:"DI", name:"Damaged Item", platform:"customer", category:"Orders", kind:"ticket",
+    keywords:["damaged item","broken product","spilled","crushed"],
+    priority:"p3", priorityLabel:"P3 \u2014 Normal", status:"confirmed",
+    firstResponse:"Apologize, request photo.",
+    infoToCollect:["Order ID","Photo of damage"],
+    action:"Verify with vendor/delivery partner.",
+    escalation:"Refund or replacement per Admin-configured rules.",
+    escalateTo:"Self-resolve (refund rules)",
+    shareMessage:"Sorry the item arrived damaged \u2014 we'll refund or replace it for you." },
+  { code:"IU", name:"Item Unavailable", platform:"customer", category:"Orders", kind:"ticket",
+    keywords:["item unavailable","out of stock","substitute"],
+    priority:"p3", priorityLabel:"P3 \u2014 Normal", status:"confirmed",
+    firstResponse:"Acknowledge substitution/cancellation.",
+    infoToCollect:["Order ID","Item affected"],
+    action:"Check vendor's substitution/partial-fulfilment action.",
+    escalation:"Confirm customer accepts substitute or receives partial refund.",
+    escalateTo:"Self-resolve",
+    shareMessage:"That item wasn't available \u2014 would you like a substitute, or should we refund that item?" ,
+    related:["VINV"] },
+  { code:"CXL", name:"Cancellation", platform:"customer", category:"Orders", kind:"ticket",
+    keywords:["cancel order","cancellation","cancel my order"],
+    priority:"p3", priorityLabel:"P3 \u2014 Normal", status:"confirmed",
+    firstResponse:"Confirm cancellation eligibility per order state.",
+    infoToCollect:["Order ID","Reason"],
+    action:"Cancel per Order State Machine rules.",
+    escalation:"Confirm refund if payment was already captured.",
+    escalateTo:"Self-resolve / Finance (if refund)",
+    shareMessage:"Your order has been cancelled \u2014 if you were charged, a refund is on its way." ,
+    related:["VCXL"] },
+  { code:"VI", name:"Vendor Issue", platform:"customer", category:"Vendor & Delivery", kind:"ticket",
+    keywords:["vendor issue","shop complaint","store problem"],
+    priority:"p3", priorityLabel:"P3 \u2014 Normal", status:"confirmed",
+    firstResponse:"Acknowledge, log vendor-specific complaint.",
+    infoToCollect:["Order ID","Nature of issue"],
+    action:"Route to Vendor Manager.",
+    escalation:"Vendor Manager follow-up; repeat issues flagged for onboarding/suspension review.",
+    escalateTo:"Vendor Manager",
+    shareMessage:"Thanks for flagging this \u2014 we're following up with the shop directly." ,
+    related:["VCOMP"] },
+  { code:"DPI", name:"Delivery Partner Issue", platform:"customer", category:"Vendor & Delivery", kind:"ticket",
+    keywords:["delivery partner issue","rider complaint","delivery behavior"],
+    priority:"p3", priorityLabel:"P3 \u2014 Normal", status:"confirmed",
+    firstResponse:"Acknowledge, log delivery-specific complaint.",
+    infoToCollect:["Order ID","Delivery partner (if known)"],
+    action:"Route to Delivery Manager.",
+    escalation:"Delivery Manager follow-up; repeat issues flagged for suspension review.",
+    escalateTo:"Delivery Manager",
+    shareMessage:"Thanks for letting us know \u2014 we're following up with the delivery partner directly." ,
+    related:["DFRAUD","DSUSP"] },
+  { code:"PI", name:"Payment Issue", platform:"customer", category:"Payments", kind:"ticket",
+    keywords:["payment issue","payment failed","charged twice","payment stuck"],
+    priority:"p1", priorityLabel:"P1 \u2014 Critical", status:"confirmed",
+    firstResponse:"Acknowledge; do not promise timelines not yet confirmed.",
+    infoToCollect:["Order ID","Payment method","Transaction reference"],
+    action:"Check payment gateway status.",
+    escalation:"Escalate to Finance Admin if unresolved at gateway level.",
+    escalateTo:"Finance Admin",
+    shareMessage:"We're checking the payment status with our payment provider and will confirm shortly." ,
+    related:["VPAY","VSUB"] },
+  { code:"CODI", name:"COD Issue", platform:"customer", category:"Payments", kind:"ticket",
+    keywords:["cod issue","cash on delivery","cod mismatch"],
+    priority:"p2", priorityLabel:"P2 \u2014 High", status:"confirmed",
+    firstResponse:"Acknowledge.",
+    infoToCollect:["Order ID","Amount collected vs. due"],
+    action:"Cross-check delivery-partner wallet/COD log.",
+    escalation:"Escalate to Finance Admin for reconciliation.",
+    escalateTo:"Finance Admin",
+    shareMessage:"We're reconciling the cash collected on this order and will follow up shortly." ,
+    related:["DCOD"] },
+  { code:"RF", name:"Refund", platform:"customer", category:"Payments", kind:"ticket",
+    keywords:["refund","money back","return payment"],
+    priority:"p2", priorityLabel:"P2 \u2014 High", status:"confirmed",
+    firstResponse:"Acknowledge request.",
+    infoToCollect:["Order ID","Reason","Amount"],
+    action:"Verify against refund policy (exact timelines: not specified in the current source documents).",
+    escalation:"Process refund per Admin/Finance approval; close on confirmation.",
+    escalateTo:"Finance Admin",
+    shareMessage:"Your refund request is being processed and will be confirmed shortly." ,
+    related:["VPAY","DEARN"] },
+  { code:"AI", name:"Account Issue", platform:"customer", category:"Account & App", kind:"ticket",
+    keywords:["account issue","login problem","cant sign in"],
+    priority:"p3", priorityLabel:"P3 \u2014 Normal", status:"confirmed",
+    firstResponse:"Acknowledge.",
+    infoToCollect:["Registered phone/email","Nature of issue"],
+    action:"Verify identity, check account status.",
+    escalation:"Escalate to Admin if account recovery needed.",
+    escalateTo:"Admin",
+    shareMessage:"We're verifying your account details now." },
+  { code:"APPI", name:"App Issue", platform:"customer", category:"Account & App", kind:"ticket",
+    keywords:["app issue","app crashing","bug","technical issue"],
+    priority:"p4", priorityLabel:"P4 \u2014 Low", status:"confirmed",
+    firstResponse:"Acknowledge, request device/app details.",
+    infoToCollect:["Device type","App version","Screenshot if possible"],
+    action:"Log as technical issue.",
+    escalation:"Escalate to Technology/Admin team.",
+    escalateTo:"Technology/Admin",
+    shareMessage:"Thanks for the report \u2014 we're passing this to our technical team." },
+  { code:"GE", name:"General Enquiry", platform:"customer", category:"General", kind:"ticket",
+    keywords:["general enquiry","question","other"],
+    priority:"p4", priorityLabel:"P4 \u2014 Low", status:"confirmed",
+    firstResponse:"Acknowledge.",
+    infoToCollect:["Nature of enquiry"],
+    action:"Answer directly or redirect.",
+    escalation:"Close once query is answered.",
+    escalateTo:"None (self-resolve)",
+    shareMessage:"Happy to help \u2014 here's the answer to your question." }
+];
+
+/* ============ VENDOR (14) ============ */
+var VENDOR_DATA = [
+  { code:"VON", name:"Vendor Onboarding", platform:"vendor", category:"Onboarding", kind:"process", status:"confirmed",
+    keywords:["vendor onboarding","how to join","become a vendor","register shop"],
+    overview:"How a shop joins AasPass, from lead to live storefront.",
+    needed:["Mobile number, owner name, shop name","Shop address & locality","Business category","KYC documents","Bank details for settlement","Operating hours, delivery radius, shop photos"],
+    steps:"Sales contact \u2192 KYC/verification \u2192 shop profile & catalog setup \u2192 subscription selection \u2192 vendor training \u2192 test order \u2192 activation \u2192 live vendor.",
+    next:"Once live, the shop appears in the customer app for its serviceable locality." ,
+    related:["DREG"] },
+  { code:"VKYC", name:"KYC & Verification Requirements", platform:"vendor", category:"Onboarding", kind:"process", status:"tbd",
+    keywords:["kyc","verification","documents needed","proof required"],
+    overview:"Documents and checks required before a shop can go live.",
+    needed:["ID proof","Shop/business proof","Bank account details"],
+    steps:"Documents collected by the Onboarding Executive \u2192 completeness check \u2192 approval.",
+    next:"If documents are incomplete, onboarding pauses until resubmitted. Exact accepted document list: not specified in the current source documents." },
+  { code:"VSHOP", name:"Shop Profile Setup", platform:"vendor", category:"Onboarding", kind:"process", status:"confirmed",
+    keywords:["shop profile","shop photos","operating hours","shop timing"],
+    overview:"Setting up your shop's photos, description, and operating hours.",
+    needed:["Shop photos","Short description","Operating hours"],
+    steps:"Onboarding Executive helps upload photos and set hours during onboarding; editable anytime after go-live.",
+    next:"Profile is what customers see on your storefront page." },
+  { code:"VCAT", name:"Product & Catalog Management", platform:"vendor", category:"Catalog & Inventory", kind:"process", status:"confirmed",
+    keywords:["add product","catalog","edit product","product list","pricing"],
+    overview:"Adding, editing, and removing products from your storefront.",
+    needed:["Product name, price, MRP where applicable","Images","Category","Stock/unit info","Variants if applicable"],
+    steps:"Add product \u2192 set price & stock \u2192 publish. Edit or delete anytime from the Vendor App.",
+    next:"Changes reflect immediately in the customer-facing storefront." },
+  { code:"VINV", name:"Out-of-Stock / Item Unavailable", platform:"vendor", category:"Catalog & Inventory", kind:"process", status:"confirmed",
+    keywords:["out of stock","item unavailable","substitute item","mark unavailable"],
+    overview:"How to mark an item unavailable or substitute it on an active order.",
+    needed:["Product to mark unavailable"],
+    steps:"Mark item out-of-stock in the app before it's ordered, or use the substitution/partial-fulfilment option on an active order.",
+    next:"Customer is notified and can accept a substitute or receive a partial refund." ,
+    related:["IU"] },
+  { code:"VORD", name:"Order Workflow (Accept \u2192 Ready)", platform:"vendor", category:"Orders", kind:"process", status:"confirmed",
+    keywords:["accept order","prepare order","mark ready","order workflow"],
+    overview:"The standard flow for handling a new order.",
+    needed:[],
+    steps:"New order \u2192 Accept \u2192 Prepare \u2192 Mark ready \u2192 Delivery partner pickup \u2192 Completed.",
+    next:"A ready order enters the delivery-partner matching pool automatically." },
+  { code:"VCXL", name:"Cancelling or Rejecting an Order", platform:"vendor", category:"Orders", kind:"process", status:"confirmed",
+    keywords:["reject order","cancel order","vendor cancellation"],
+    overview:"When and how a vendor can decline or cancel an order.",
+    needed:["Order ID","Reason"],
+    steps:"Reject before accepting, or request cancellation/refund after accepting if the order can't be fulfilled.",
+    next:"Refund is processed if payment was already captured, per Admin/Finance approval." ,
+    related:["CXL"] },
+  { code:"VSUB", name:"Subscription Plans & Billing", platform:"vendor", category:"Subscription & Payments", kind:"process", status:"optional",
+    keywords:["subscription","199 plan","499 plan","999 plan","billing","free period"],
+    overview:"\u20b9199/month minimum base plan; optional \u20b9499 and \u20b9999 upsell tiers. No per-order commission in the core model.",
+    needed:[],
+    steps:"Base tier: \u20b9199/month (LOCKED/CONFIRMED). Upsell tiers: \u20b9499/month, \u20b9999/month (OPTIONAL). Founding vendors get the first 3 months free.",
+    next:"Billing starts automatically at the end of your free period unless you cancel." ,
+    related:["PI","VPAY"] },
+  { code:"VPAY", name:"Settlement & Payouts", platform:"vendor", category:"Subscription & Payments", kind:"process", status:"tbd",
+    keywords:["settlement","payout","when do i get paid","bank transfer"],
+    overview:"How and when you get paid for orders.",
+    needed:[],
+    steps:"Vendor gross sales \u2192 subscription economics applied \u2192 refunds/adjustments \u2192 taxes where applicable \u2192 net settlement \u2192 bank payout.",
+    next:"View available/pending/settled balance in your vendor wallet. Exact payout cadence and gateway: not specified in the current source documents." ,
+    related:["RF","PI"] },
+  { code:"VANA", name:"Vendor Dashboard & Analytics", platform:"vendor", category:"Subscription & Payments", kind:"process", status:"confirmed",
+    keywords:["dashboard","analytics","sales report","popular products"],
+    overview:"What you can see about your shop's performance.",
+    needed:[],
+    steps:"Dashboard shows: sales, orders, average order value, popular products, peak times, repeat customers, cancellation rate, ratings.",
+    next:"Use this to decide on catalog and stock changes." },
+  { code:"VCOMP", name:"Customer Complaint About My Shop", platform:"vendor", category:"Support Issues", kind:"ticket", status:"confirmed",
+    keywords:["customer complaint","complaint about shop","bad review"],
+    priority:"p3", priorityLabel:"P3 \u2014 Normal",
+    firstResponse:"Acknowledge, log the vendor-specific complaint.",
+    infoToCollect:["Order ID","Nature of issue"],
+    action:"Vendor Manager reviews the complaint with you.",
+    escalation:"Repeat issues are flagged for onboarding/suspension review.",
+    escalateTo:"Vendor Manager",
+    shareMessage:"Thanks for flagging this \u2014 we'll review it with the vendor directly." ,
+    related:["VI"] },
+  { code:"VDEL", name:"Delivery Partner Didn't Pick Up", platform:"vendor", category:"Support Issues", kind:"ticket", status:"proposed",
+    keywords:["no delivery partner","pickup delay","nobody picked up order"],
+    priority:"p2", priorityLabel:"P2 \u2014 High",
+    firstResponse:"Acknowledge, check assignment status for the order.",
+    infoToCollect:["Order ID","Time since marked ready-for-pickup"],
+    action:"Operations checks delivery matching/coverage for your zone.",
+    escalation:"Escalate to Delivery Manager if this repeats in your locality.",
+    escalateTo:"Delivery Manager",
+    shareMessage:"We're checking delivery coverage in your area now." ,
+    related:["WIMO","DASSIGN","DFAIL"] },
+  { code:"VSUSP", name:"Suspension or Rejection", platform:"vendor", category:"Account Status", kind:"process", status:"confirmed",
+    keywords:["suspended","rejected","why is my shop offline","account suspended"],
+    overview:"Reasons and process for vendor rejection or suspension.",
+    needed:[],
+    steps:"Reason documented (failed KYC, category not eligible, repeated failures, fraud flag) \u2192 vendor notified where appropriate \u2192 pending settlement resolved \u2192 storefront deactivated.",
+    next:"Case is logged for Admin/Trust & Safety review." ,
+    related:["DSUSP"] },
+  { code:"VOFF", name:"Leaving AasPass (Offboarding)", platform:"vendor", category:"Account Status", kind:"process", status:"confirmed",
+    keywords:["leave aaspass","close my shop","offboarding","stop selling"],
+    overview:"How to voluntarily leave the platform.",
+    needed:[],
+    steps:"Request offboarding \u2192 final settlement calculated and paid \u2192 subscription cancelled from next billing cycle \u2192 storefront removed \u2192 catalog archived (not deleted).",
+    next:"Exit reason is logged for retention analysis." }
+];
+
+/* ============ DELIVERY PARTNER (18) ============ */
+var DELIVERY_DATA = [
+  { code:"DREG", name:"Registration & Sign-up", platform:"delivery", category:"Registration", kind:"process", status:"confirmed",
+    keywords:["registration","sign up","become delivery partner","join as rider"],
+    overview:"How to become an AasPass delivery partner.",
+    needed:["Name, phone number","Locality","Delivery mode selection"],
+    steps:"Register in-app \u2192 verification \u2192 locality assignment \u2192 available for assignments.",
+    next:"You'll be matched to orders in your locality once verified." ,
+    related:["VON"] },
+  { code:"DKYC", name:"Verification & Documents", platform:"delivery", category:"Registration", kind:"process", status:"legal",
+    keywords:["verification","documents","id proof","age eligibility"],
+    overview:"Identity, phone, and locality verification; age/legal eligibility check.",
+    needed:["ID proof","Phone verification","Locality confirmation"],
+    steps:"Submit documents \u2192 identity/phone/locality verification \u2192 approval.",
+    next:"Age, labor classification, and insurance requirements require jurisdiction-specific legal review before rollout." },
+  { code:"DMODE", name:"Choosing a Delivery Mode", platform:"delivery", category:"Registration", kind:"process", status:"confirmed",
+    keywords:["delivery mode","walker","bicycle","motorcycle","scooter","vehicle needed"],
+    overview:"AasPass supports multiple delivery modes \u2014 a vehicle is not required for every mode.",
+    needed:[],
+    steps:"Walker (0\u20131 km, configurable, no vehicle needed) \u00b7 Bicycle (medium distance) \u00b7 Motorcycle/Scooter (larger radius) \u00b7 Special/Heavy (vehicle required where appropriate).",
+    next:"Your mode determines which orders you're matched to." },
+  { code:"DAVAIL", name:"Going Available / Setting Your Zone", platform:"delivery", category:"Availability & Assignment", kind:"process", status:"confirmed",
+    keywords:["availability","go online","set zone","delivery radius"],
+    overview:"Toggle your availability and set your delivery radius and mode.",
+    needed:[],
+    steps:"Toggle availability ON in-app \u2192 confirm delivery radius and mode \u2192 you're now eligible for assignment.",
+    next:"Toggle OFF when you stop for the day." },
+  { code:"DASSIGN", name:"How Orders Get Assigned", platform:"delivery", category:"Availability & Assignment", kind:"process", status:"confirmed",
+    keywords:["order assignment","how am i matched","assignment logic"],
+    overview:"The system matches the nearest available, eligible-mode delivery partner to a ready-for-pickup order.",
+    needed:[],
+    steps:"Vendor marks order ready \u2192 matching engine finds nearest available partner in the right mode \u2192 assignment sent to your app.",
+    next:"If you decline, the order is reassigned to another partner.",
+    related:["WIMO","LD","VDEL"] },
+  { code:"DACC", name:"Accepting or Declining an Assignment", platform:"delivery", category:"Availability & Assignment", kind:"process", status:"confirmed",
+    keywords:["accept order","decline order","assignment accept"],
+    overview:"You can accept or decline an incoming assignment.",
+    needed:[],
+    steps:"Accept within the app to proceed to pickup; decline triggers automatic reassignment to another partner.",
+    next:"Repeated declines may affect your reliability score (see DRATE)." },
+  { code:"DPICK", name:"Pickup Process", platform:"delivery", category:"Delivery Execution", kind:"process", status:"confirmed",
+    keywords:["pickup","collect order","vendor pickup"],
+    overview:"Collecting the order from the vendor.",
+    needed:[],
+    steps:"Travel to the vendor \u2192 confirm pickup in-app \u2192 verify item count against the order where possible.",
+    next:"Proceed to the customer's address once pickup is confirmed." },
+  { code:"DDROP", name:"Delivering to the Customer", platform:"delivery", category:"Delivery Execution", kind:"process", status:"confirmed",
+    keywords:["delivery","drop off","hand over order","customer delivery"],
+    overview:"Completing the delivery to the customer.",
+    needed:[],
+    steps:"Travel to the customer \u2192 hand over the order \u2192 confirm delivery in-app.",
+    next:"This completes the order and credits your delivery earning." },
+  { code:"DFAIL", name:"Failed Delivery", platform:"delivery", category:"Delivery Execution", kind:"ticket", status:"confirmed",
+    keywords:["failed delivery","cant deliver","delivery failed"],
+    priority:"p2", priorityLabel:"P2 \u2014 High",
+    firstResponse:"Mark Delivery Failed with a reason in-app immediately.",
+    infoToCollect:["Order ID","Reason for failure"],
+    action:"Routes automatically to Support for resolution.",
+    escalation:"Support determines redelivery, refund, or other resolution with the customer.",
+    escalateTo:"Support",
+    shareMessage:"Delivery marked as failed \u2014 Support will follow up on next steps.",
+    related:["WIMO","VDEL"] },
+  { code:"DCUST", name:"Customer Unavailable at Drop-off", platform:"delivery", category:"Delivery Execution", kind:"ticket", status:"confirmed",
+    keywords:["customer not available","customer not answering","no one home"],
+    priority:"p3", priorityLabel:"P3 \u2014 Normal",
+    firstResponse:"Attempt contact per in-app instructions.",
+    infoToCollect:["Order ID"],
+    action:"Wait per in-app guidance; if unresolved, mark as failed delivery.",
+    escalation:"Escalates to Support as a Failed Delivery case (see DFAIL).",
+    escalateTo:"Support",
+    shareMessage:"Customer unavailable at drop-off \u2014 attempted contact per in-app guidance before marking as failed." },
+  { code:"DVEND", name:"Vendor Not Ready at Pickup", platform:"delivery", category:"Delivery Execution", kind:"ticket", status:"confirmed",
+    keywords:["vendor not ready","shop closed","waiting at vendor"],
+    priority:"p3", priorityLabel:"P3 \u2014 Normal",
+    firstResponse:"Report in-app that the vendor is not ready/available.",
+    infoToCollect:["Order ID","Vendor name"],
+    action:"Operations follows up with the vendor.",
+    escalation:"Escalate to Operations if wait time becomes excessive.",
+    escalateTo:"Operations",
+    shareMessage:"Vendor not ready at pickup \u2014 reported in-app for Operations follow-up." },
+  { code:"DCOD", name:"Collecting Cash on Delivery", platform:"delivery", category:"Earnings & Payouts", kind:"process", status:"tbd",
+    keywords:["cod","cash collection","cash on delivery"],
+    overview:"Collecting payment at drop-off where COD is used.",
+    needed:[],
+    steps:"Collect the exact order amount at handover \u2192 cash is reconciled against your wallet at settlement.",
+    next:"Exact reconciliation cadence: not specified in the current source documents \u2014 strong reconciliation controls are required regardless." ,
+    related:["CODI"] },
+  { code:"DEARN", name:"Earnings & Wallet", platform:"delivery", category:"Earnings & Payouts", kind:"process", status:"confirmed",
+    keywords:["earnings","wallet","how much do i earn","delivery fee"],
+    overview:"How your earnings are tracked.",
+    needed:[],
+    steps:"Each completed delivery credits the delivery fee to your wallet. Incentives, cash collected, and adjustments are also tracked there.",
+    next:"View your wallet balance anytime in the app." ,
+    related:["RF"] },
+  { code:"DSETT", name:"Settlement / Payout Schedule", platform:"delivery", category:"Earnings & Payouts", kind:"process", status:"tbd",
+    keywords:["payout schedule","when am i paid","settlement"],
+    overview:"When your wallet balance is paid out to your bank account.",
+    needed:[],
+    steps:"Wallet is settled on a defined payout cadence via banking/payout rails.",
+    next:"Exact payout cadence: not specified in the current source documents." },
+  { code:"DRATE", name:"Ratings & Reliability Score", platform:"delivery", category:"Earnings & Payouts", kind:"process", status:"confirmed",
+    keywords:["rating","reliability score","my score"],
+    overview:"Your rating and reliability score affect your standing on the platform.",
+    needed:[],
+    steps:"Ratings come from completed deliveries; reliability score reflects acceptance rate and delivery success.",
+    next:"Low scores may lead to review or suspension (see DSUSP)." },
+  { code:"DSAFE", name:"Safety Concerns", platform:"delivery", category:"Issues & Safety", kind:"ticket", status:"confirmed",
+    keywords:["safety","unsafe","emergency","harassment"],
+    priority:"p1", priorityLabel:"P1 \u2014 Critical",
+    firstResponse:"Treat as highest priority \u2014 safety concerns are P1.",
+    infoToCollect:["What happened","Location","Order ID if applicable"],
+    action:"Report immediately through in-app support.",
+    escalation:"Escalates directly to Founder/Leadership per the Escalation Matrix (Level 4).",
+    escalateTo:"Founder/Leadership (L4)",
+    shareMessage:"Safety concern reported immediately \u2014 treated as top priority." },
+  { code:"DFRAUD", name:"Reporting Fraud or Misconduct", platform:"delivery", category:"Issues & Safety", kind:"process", status:"confirmed",
+    keywords:["fraud","misconduct","report a problem","gps manipulation"],
+    overview:"How suspected fraud (fake deliveries, GPS manipulation, cash issues) is investigated.",
+    needed:[],
+    steps:"Report via in-app support \u2192 investigated per platform fraud-prevention controls (GPS/geofence checks, delivery proof, COD reconciliation).",
+    next:"Findings may lead to account review or suspension." ,
+    related:["DPI","DSUSP"] },
+  { code:"DSUSP", name:"Suspension or Deactivation", platform:"delivery", category:"Issues & Safety", kind:"process", status:"confirmed",
+    keywords:["suspended","deactivated","account blocked"],
+    overview:"When and why a delivery partner account may be suspended.",
+    needed:[],
+    steps:"Repeated failures, verified fraud, or safety violations \u2192 reviewed by Admin/Trust & Safety \u2192 suspension if warranted.",
+    next:"Process mirrors the vendor suspension checklist, adapted for delivery partners." ,
+    related:["VSUSP","DPI"] }
+];
+
+/* ============ APP LOGIC ============ */
+var DATA = CUSTOMER_DATA.concat(VENDOR_DATA).concat(DELIVERY_DATA);
+var activePlatform = "customer";
+var searchMode = false;
+
+var tabsEl = document.getElementById('tabs');
+var chipsEl = document.getElementById('chips');
+var sidebar = document.getElementById('sidebar');
+var card = document.getElementById('card');
+var welcome = document.getElementById('welcome');
+var searchInput = document.getElementById('search');
+
+var PLAT_COLOR = {customer:"var(--plat-customer)", vendor:"var(--plat-vendor)", delivery:"var(--plat-delivery)"};
+
+function countByPlatform(pid){
+  var n = 0;
+  for(var i=0;i<DATA.length;i++){ if(DATA[i].platform===pid) n++; }
+  return n;
+}
+
+function findEntry(code){
+  for(var i=0;i<DATA.length;i++){ if(DATA[i].code===code) return DATA[i]; }
+  return null;
+}
+
+function goToPlatform(pid){
+  activePlatform = pid;
+  searchInput.value = "";
+  searchMode = false;
+  buildTabs();
+  buildSidebar();
+  showWelcome();
+  document.getElementById('statsbar').style.display = 'flex';
+  document.getElementById('chips').style.display = 'flex';
+  sidebar.style.display = 'block';
+}
+
+function renderHomeScreen(){
+  var el = document.getElementById('homeScreen');
+  var html = '';
+
+  html += '<div class="hero">';
+  html += '<h1>AasPass</h1>';
+  html += '<div class="tagline">Jo chahiye, aas-paas se.</div>';
+  html += '<p>AasPass is a hyperlocal commerce and local-delivery platform: it digitizes existing neighborhood shops \u2014 kirana stores, food stalls, restaurants, stationery and electronics shops, and more \u2014 and connects them to nearby customers, fulfilled by local delivery partners on foot, bicycle, or two-wheeler. AasPass is built and operated by <b>Bharat Infotechs</b>.</p>';
+  html += '</div>';
+
+  html += '<div class="home-section"><h2>What AasPass Does</h2><div class="info-grid">';
+  html += '<div class="info-card"><h3>For Customers</h3><p>Browse nearby shops, order at a transparent price \u2014 product + delivery + a flat \u20b91 platform fee \u2014 and track the order to delivery.</p></div>';
+  html += '<div class="info-card"><h3>For Vendors</h3><p>Get a digital storefront with no per-order commission in the core model \u2014 just a flat monthly subscription starting at \u20b9199.</p></div>';
+  html += '<div class="info-card"><h3>For Delivery Partners</h3><p>Earn by delivering nearby \u2014 walking and cycling are first-class modes, not just motorcycles.</p></div>';
+  html += '</div></div>';
+
+  html += '<div class="home-section"><h2>Leadership</h2>';
+  html += '<div class="leader-card" style="border-style:solid;"><div class="leader-avatar" style="border-style:solid; background:var(--primary); color:#fff; font-weight:700; font-size:20px;">L</div><div><div style="font-weight:700; color:var(--text); font-size:15px;">Leo <span style="font-weight:400; color:var(--gray); font-size:13px;">\u00b7 Founder</span></div><p style="margin:4px 0 0; font-size:13px; color:var(--gray);">A longer bio and photo can be added here whenever you\'d like \u2014 this section only includes what\'s been confirmed so far.</p></div></div>';
+  html += '</div>';
+
+  html += '<div class="home-section"><h2>How to Use This DT</h2><ol class="steps-list">';
+  html += '<li><b>Pick a platform.</b> Use the Customer, Vendor, or Delivery Partner tab above \u2014 or search across all three at once from this screen.</li>';
+  html += '<li><b>Browse or search.</b> Click a category on the left, or type a plain-language query (\u201crefund\u201d, \u201clate delivery\u201d, \u201cvendor payout\u201d) into the search bar.</li>';
+  html += '<li><b>Read the tags.</b> Every topic is labeled LOCKED/CONFIRMED, PROPOSED, OPTIONAL, TBD, or LEGAL/FINANCE REVIEW \u2014 check the footer legend if you\'re ever unsure what a tag means.</li>';
+  html += '<li><b>Follow the structure.</b> Ticket-style topics show First Response, What to Check, Info to Collect, What to Share, and Escalation. How-to topics show Overview, What You Need, Steps, and What Happens Next.</li>';
+  html += '<li><b>Use Related Topics.</b> Most entries link to relevant topics on other platforms \u2014 click any pill to jump straight there.</li>';
+  html += '<li><b>Ask the assistant.</b> Use the chat bubble in the bottom-right corner to describe a situation in your own words \u2014 it searches this same DT and gives you what to check, what to say, and where to escalate.</li>';
+  html += '</ol></div>';
+
+  html += '<div class="home-section"><h2>References \u2014 Companion Documents</h2><ul class="ref-list">';
+  var refs = [
+    ["AasPass PDR (corrected)", "The master product requirements document \u2014 vision, business model, every platform's screens, architecture."],
+    ["AasPass Unit Economics (corrected)", "The financial model \u2014 platform fee, subscription revenue, cost assumptions, contribution margin."],
+    ["Business Operations & SOP Master Manual", "Full operating manual \u2014 sales playbook, onboarding, order operations, support SOP, escalation matrix."],
+    ["Customer Support Self-Training Deck", "Slide-based onboarding for new support staff, covering the same process knowledge as this DT."],
+    ["Software Requirements & System Integration Architecture", "What needs to be built and integrated across all five AasPass platforms."],
+    ["Detailed Technical Specification", "Data model, API map, state machines, and per-platform technical detail."]
+  ];
+  for(var i=0;i<refs.length;i++){
+    html += '<li><span class="ref-name">' + refs[i][0] + '</span><span class="ref-desc">' + refs[i][1] + '</span></li>';
+  }
+  html += '</ul></div>';
+
+  html += '<div class="home-section"><h2>Recommendations for Using This DT Well</h2><ul class="reco-list">';
+  var recos = [
+    "Check the status tag before telling a customer or vendor something is confirmed \u2014 PROPOSED and TBD items need a manager's confirmation first.",
+    "When in doubt, escalate rather than guess \u2014 a missed Level-1 fix costs a minute; a missed safety issue costs far more.",
+    "Use the chat assistant for phrasing help, but verify against the full entry (via \u201cView full details\u201d) before closing a real ticket.",
+    "Use Related Topics to check the other side of a cross-platform issue \u2014 e.g. a customer's \u201cWhere is my order\u201d often connects to a delivery-side assignment problem.",
+    "If a real customer situation doesn't match anything here, log it anyway and flag it to your Support Lead \u2014 gaps in this DT should get fixed, not worked around."
+  ];
+  for(var r=0;r<recos.length;r++){ html += '<li>' + recos[r] + '</li>'; }
+  html += '</ul></div>';
+
+  html += '<div class="home-cta"><button id="homeStartBtn">Start browsing \u2192</button></div>';
+
+  el.innerHTML = html;
+  document.getElementById('homeStartBtn').addEventListener('click', function(){ goToPlatform('customer'); });
+}
+
+function showHome(){
+  activePlatform = "home";
+  buildTabs();
+  sidebar.style.display = 'none';
+  document.getElementById('statsbar').style.display = 'none';
+  document.getElementById('chips').style.display = 'none';
+  welcome.style.display = 'none';
+  card.classList.remove('visible');
+  document.getElementById('homeScreen').style.display = 'block';
+}
+
+function buildTabs(){
+  tabsEl.innerHTML = "";
+  var home = document.createElement('div');
+  home.className = 'tab' + (activePlatform === 'home' ? ' active' : '');
+  home.innerHTML = '<span class="dot" style="background:#5B6660"></span>Home';
+  home.addEventListener('click', showHome);
+  tabsEl.appendChild(home);
+  for(var i=0;i<PLATFORMS.length;i++){
+    var p = PLATFORMS[i];
+    var tab = document.createElement('div');
+    tab.className = 'tab' + (p.id===activePlatform ? ' active' : '');
+    tab.setAttribute('data-platform', p.id);
+    tab.innerHTML = '<span class="dot" style="background:' + PLAT_COLOR[p.id] + '"></span>' + p.label + ' <span class="count">(' + countByPlatform(p.id) + ')</span>';
+    (function(pid){
+      tab.addEventListener('click', function(){
+        document.getElementById('homeScreen').style.display = 'none';
+        goToPlatform(pid);
+      });
+    })(p.id);
+    tabsEl.appendChild(tab);
+  }
+}
+
+function buildStats(){
+  var statsEl = document.getElementById('statsbar');
+  if(!statsEl) return;
+  var tickets = 0, processes = 0, statusCount = {confirmed:0, proposed:0, optional:0, tbd:0, legal:0};
+  for(var i=0;i<DATA.length;i++){
+    if(DATA[i].kind === 'ticket') tickets++; else processes++;
+    statusCount[DATA[i].status] = (statusCount[DATA[i].status]||0) + 1;
+  }
+  statsEl.innerHTML =
+    '<span><b>' + DATA.length + '</b> topics across <b>3</b> platforms</span>' +
+    '<span class="sep">|</span>' +
+    '<span><b>' + tickets + '</b> support tickets \u00b7 <b>' + processes + '</b> how-to guides</span>' +
+    '<span class="sep">|</span>' +
+    '<span><b>' + statusCount.confirmed + '</b> confirmed from source \u00b7 <b>' + (statusCount.proposed+statusCount.optional+statusCount.tbd+statusCount.legal) + '</b> flagged for review</span>';
+}
+
+function wireWelcomeCards(){
+  var cards = document.querySelectorAll('.pcard');
+  for(var i=0;i<cards.length;i++){
+    (function(el){
+      el.addEventListener('click', function(){ goToPlatform(el.getAttribute('data-goto')); });
+    })(cards[i]);
+  }
+}
+
+function buildChips(){
+  chipsEl.innerHTML = '<span class="label">Quick jump:</span>';
+  for(var i=0;i<QUICK_JUMP.length;i++){
+    var code = QUICK_JUMP[i];
+    var chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.textContent = code;
+    (function(c){
+      chip.addEventListener('click', function(){
+        var entry = findEntry(c);
+        if(entry){
+          activePlatform = entry.platform;
+          searchInput.value = "";
+          searchMode = false;
+          buildTabs();
+          buildSidebar();
+          selectItem(c);
+        }
+      });
+    })(code);
+    chipsEl.appendChild(chip);
+  }
+}
+
+function buildSidebar(){
+  sidebar.innerHTML = "";
+  var platformsToShow = searchMode ? PLATFORMS.map(function(p){return p.id;}) : [activePlatform];
+  for(var pIdx=0; pIdx<platformsToShow.length; pIdx++){
+    var pid = platformsToShow[pIdx];
+    var cats = CATEGORY_ORDER[pid];
+    for(var c=0;c<cats.length;c++){
+      var cat = cats[c];
+      var groupItems = [];
+      for(var i=0;i<DATA.length;i++){
+        if(DATA[i].platform===pid && DATA[i].category===cat) groupItems.push(DATA[i]);
+      }
+      if(groupItems.length===0) continue;
+      var group = document.createElement('div');
+      group.className = 'group';
+      group.setAttribute('data-cat', pid + '|' + cat);
+      var title = document.createElement('div');
+      title.className = 'group-title';
+      if(searchMode){
+        var platLabel = PLATFORMS.filter(function(p){return p.id===pid;})[0].label;
+        title.innerHTML = '<span class="plat">' + platLabel + ' \u00b7</span>' + cat;
+      } else {
+        title.textContent = cat;
+      }
+      group.appendChild(title);
+      for(var j=0;j<groupItems.length;j++){
+        var d = groupItems[j];
+        var item = document.createElement('div');
+        item.className = 'item';
+        item.setAttribute('data-code', d.code);
+        var kindDot = document.createElement('span');
+        kindDot.className = 'kind-dot ' + (d.kind === 'ticket' ? 'ticket' : 'process');
+        item.appendChild(kindDot);
+        var labelSpan = document.createElement('span');
+        labelSpan.className = 'label';
+        labelSpan.textContent = d.name;
+        item.appendChild(labelSpan);
+        if(d.alias){
+          var aliasSpan = document.createElement('span');
+          aliasSpan.className = 'alias-badge';
+          aliasSpan.textContent = d.alias;
+          item.appendChild(aliasSpan);
+        }
+        (function(code){
+          item.addEventListener('click', function(){ selectItem(code); });
+        })(d.code);
+        group.appendChild(item);
+      }
+      sidebar.appendChild(group);
+    }
+  }
+  var noResults = document.createElement('div');
+  noResults.className = 'no-results';
+  noResults.id = 'noResults';
+  noResults.style.display = 'none';
+  noResults.textContent = 'No matching query. Try a different word, or route to Level 2 support for a topic not yet in this DT.';
+  sidebar.appendChild(noResults);
+}
+
+function statusTagClass(status){ return status; }
+function statusTagLabel(status){
+  var map = {confirmed:"LOCKED/CONFIRMED", proposed:"PROPOSED", optional:"OPTIONAL", tbd:"TBD", legal:"LEGAL/FINANCE REVIEW"};
+  return map[status] || status.toUpperCase();
+}
+
+var TAT_BY_PRIORITY = {
+  p1: "Immediate \u2014 highest priority (P1 Critical)",
+  p2: "Same-day priority (P2 High)",
+  p3: "Standard queue turnaround (P3 Normal)",
+  p4: "Low urgency \u2014 respond when queue allows (P4 Low)"
+};
+
+function renderCard(entry){
+  welcome.style.display = 'none';
+  card.classList.add('visible');
+  var platLabel = PLATFORMS.filter(function(p){return p.id===entry.platform;})[0].label;
+  var html = '';
+  html += '<div class="breadcrumb"><span class="crumb" data-goto-platform="' + entry.platform + '">' + platLabel + '</span> / <span class="crumb" data-goto-category="' + entry.platform + '|' + entry.category + '">' + entry.category + '</span></div>';
+  html += '<div class="card-head">';
+  html += '<div><div class="code-big" style="font-size:24px;">' + entry.name + '</div>';
+  if(entry.alias){ html += '<span class="tag" style="background:var(--accent); margin-top:6px; display:inline-block;">' + entry.alias + '</span>'; }
+  html += '</div>';
+  html += '<div class="tags">';
+  if(entry.kind === 'ticket'){
+    html += '<span class="tag ' + entry.priority + '">' + entry.priorityLabel + '</span>';
+    html += '<span class="tag tat">TAT: ' + TAT_BY_PRIORITY[entry.priority] + '</span>';
+  }
+  html += '<span class="tag platform">' + platLabel + '</span>';
+  html += '<span class="tag ' + statusTagClass(entry.status) + '">' + statusTagLabel(entry.status) + '</span>';
+  if(entry.kind === 'ticket' && entry.escalateTo){
+    html += '<span class="tag escalate">\u2192 ' + entry.escalateTo + '</span>';
+  }
+  html += '</div></div>';
+
+  if(entry.kind === 'ticket'){
+    html += '<div class="section"><h3>First response</h3><div class="body">' + entry.firstResponse + '</div></div>';
+    html += '<div class="section"><h3>What to check</h3><div class="body">' + entry.action + '</div></div>';
+    html += '<div class="section"><h3>Information to collect</h3><div class="body"><ul>';
+    for(var i=0;i<entry.infoToCollect.length;i++){ html += '<li>' + entry.infoToCollect[i] + '</li>'; }
+    html += '</ul></div></div>';
+    if(entry.shareMessage){
+      html += '<div class="section"><h3>What to share with the customer</h3><div class="body">\u201c' + entry.shareMessage + '\u201d <span class="tag proposed" style="margin-left:6px;">PROPOSED wording</span></div></div>';
+    }
+    html += '<div class="section"><h3>Escalation / resolution</h3><div class="body escalation">' + entry.escalation + '</div></div>';
+    html += '<div class="section"><h3>Closure</h3><div class="body">Close the ticket once the action above is confirmed resolved. <span class="tag proposed" style="margin-left:6px;">PROPOSED</span></div></div>';
+  } else {
+    html += '<div class="section"><h3>Overview</h3><div class="body">' + entry.overview + '</div></div>';
+    if(entry.needed && entry.needed.length){
+      html += '<div class="section"><h3>What you need</h3><div class="body"><ul>';
+      for(var k=0;k<entry.needed.length;k++){ html += '<li>' + entry.needed[k] + '</li>'; }
+      html += '</ul></div></div>';
+    }
+    html += '<div class="section"><h3>Steps</h3><div class="body">' + entry.steps + '</div></div>';
+    html += '<div class="section"><h3>What happens next</h3><div class="body escalation">' + entry.next + '</div></div>';
+  }
+
+  if(entry.related && entry.related.length){
+    html += '<div class="related-wrap"><h3>Related topics on other platforms</h3>';
+    for(var r=0;r<entry.related.length;r++){
+      var rel = findEntry(entry.related[r]);
+      if(!rel) continue;
+      var relPlatLabel = PLATFORMS.filter(function(p){return p.id===rel.platform;})[0].label;
+      html += '<span class="related-pill" data-goto-item="' + rel.code + '"><span class="plat-dot" style="background:' + PLAT_COLOR[rel.platform] + '"></span>' + relPlatLabel + ' \u00b7 ' + rel.name + '</span>';
+    }
+    html += '</div>';
+  }
+
+  card.innerHTML = html;
+  wireCardLinks();
+}
+
+function goToItem(code){
+  var entry = findEntry(code);
+  if(!entry) return;
+  document.getElementById('homeScreen').style.display = 'none';
+  document.getElementById('statsbar').style.display = 'flex';
+  document.getElementById('chips').style.display = 'flex';
+  sidebar.style.display = 'block';
+  if(entry.platform !== activePlatform || searchMode){
+    activePlatform = entry.platform;
+    searchInput.value = "";
+    searchMode = false;
+    buildTabs();
+    buildSidebar();
+  }
+  selectItem(code);
+}
+
+function wireCardLinks(){
+  var crumbsP = card.querySelectorAll('.crumb[data-goto-platform]');
+  for(var i=0;i<crumbsP.length;i++){
+    (function(el){
+      el.addEventListener('click', function(){ goToPlatform(el.getAttribute('data-goto-platform')); });
+    })(crumbsP[i]);
+  }
+  var crumbsC = card.querySelectorAll('.crumb[data-goto-category]');
+  for(var j=0;j<crumbsC.length;j++){
+    (function(el){
+      el.addEventListener('click', function(){
+        var parts = el.getAttribute('data-goto-category').split('|');
+        var pid = parts[0], cat = parts[1];
+        activePlatform = pid;
+        searchInput.value = "";
+        searchMode = false;
+        buildTabs();
+        buildSidebar();
+        for(var k=0;k<DATA.length;k++){
+          if(DATA[k].platform===pid && DATA[k].category===cat){ selectItem(DATA[k].code); break; }
+        }
+      });
+    })(crumbsC[j]);
+  }
+  var pills = card.querySelectorAll('.related-pill[data-goto-item]');
+  for(var m=0;m<pills.length;m++){
+    (function(el){
+      el.addEventListener('click', function(){ goToItem(el.getAttribute('data-goto-item')); });
+    })(pills[m]);
+  }
+}
+
+function selectItem(code){
+  var items = document.querySelectorAll('.item');
+  for(var i=0;i<items.length;i++){ items[i].classList.remove('active'); }
+  var el = document.querySelector('.item[data-code="' + code + '"]');
+  if(el) el.classList.add('active');
+  var entry = findEntry(code);
+  if(entry) renderCard(entry);
+}
+
+function showWelcome(){
+  welcome.style.display = 'block';
+  card.classList.remove('visible');
+  card.innerHTML = '';
+}
+
+function matches(entry, q){
+  if(!q) return true;
+  q = q.toLowerCase();
+  if(entry.code.toLowerCase().indexOf(q) !== -1) return true;
+  if(entry.name.toLowerCase().indexOf(q) !== -1) return true;
+  for(var i=0;i<entry.keywords.length;i++){
+    if(entry.keywords[i].indexOf(q) !== -1) return true;
+  }
+  if(entry.kind === 'ticket' && entry.escalateTo && entry.escalateTo.toLowerCase().indexOf(q) !== -1) return true;
+  return false;
+}
+
+function filterSidebar(q){
+  searchMode = (q.length > 0);
+  buildSidebar();
+  var anyVisible = false;
+  var firstMatchCode = null;
+  var groups = document.querySelectorAll('.group');
+  for(var g=0; g<groups.length; g++){
+    var group = groups[g];
+    var groupHasVisible = false;
+    var items = group.querySelectorAll('.item');
+    for(var i=0;i<items.length;i++){
+      var item = items[i];
+      var entry = findEntry(item.getAttribute('data-code'));
+      var show = matches(entry, q);
+      if(show){ item.classList.remove('hidden'); } else { item.classList.add('hidden'); }
+      if(show){
+        groupHasVisible = true;
+        anyVisible = true;
+        if(!firstMatchCode) firstMatchCode = entry.code;
+      }
+    }
+    if(groupHasVisible){ group.classList.remove('hidden'); } else { group.classList.add('hidden'); }
+  }
+  var nr = document.getElementById('noResults');
+  if(nr) nr.style.display = (anyVisible || !q) ? 'none' : 'block';
+  return firstMatchCode;
+}
+
+searchInput.addEventListener('input', function(e){
+  if(activePlatform === 'home'){
+    activePlatform = 'customer';
+    buildTabs();
+    document.getElementById('homeScreen').style.display = 'none';
+    document.getElementById('statsbar').style.display = 'flex';
+    document.getElementById('chips').style.display = 'flex';
+    sidebar.style.display = 'block';
+  }
+  var q = e.target.value.replace(/^\s+|\s+$/g,'');
+  var firstMatch = filterSidebar(q);
+  if(q.length > 1 && firstMatch){
+    selectItem(firstMatch);
+  } else if(q.length === 0){
+    showWelcome();
+  }
+});
+
+searchInput.addEventListener('keydown', function(e){
+  if(e.key === 'Enter'){
+    var q = e.target.value.replace(/^\s+|\s+$/g,'');
+    var firstMatch = filterSidebar(q);
+    if(firstMatch) selectItem(firstMatch);
+  }
+});
+
+/* ============ CHAT ASSISTANT ============ */
+var STOPWORDS = ["the","is","my","a","an","to","for","of","and","in","on","at","with","was","it","this","that","has","have","i","me","please","can","you","how","do","does","did","customer","says","said"];
+
+function tokenize(q){
+  var words = q.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/);
+  var out = [];
+  for(var i=0;i<words.length;i++){
+    if(words[i].length >= 3 && STOPWORDS.indexOf(words[i]) === -1) out.push(words[i]);
+  }
+  return out;
+}
+
+function chatScore(entry, query, words){
+  var q = query.toLowerCase();
+  var score = 0;
+  if(entry.code.toLowerCase() === q) score += 10;
+  if(entry.name.toLowerCase().indexOf(q) !== -1 || q.indexOf(entry.name.toLowerCase()) !== -1) score += 6;
+  for(var i=0;i<entry.keywords.length;i++){
+    if(entry.keywords[i] === q) score += 8;
+    else if(entry.keywords[i].indexOf(q) !== -1) score += 4;
+  }
+  for(var w=0; w<words.length; w++){
+    var word = words[w];
+    if(entry.name.toLowerCase().indexOf(word) !== -1) score += 2;
+    for(var k=0;k<entry.keywords.length;k++){
+      if(entry.keywords[k].indexOf(word) !== -1){ score += 1.5; break; }
+    }
+    if(entry.kind === 'ticket' && entry.escalateTo && entry.escalateTo.toLowerCase().indexOf(word) !== -1) score += 1.5;
+    if(entry.category.toLowerCase().indexOf(word) !== -1) score += 0.5;
+  }
+  return score;
+}
+
+function findBestMatches(query){
+  var words = tokenize(query);
+  var scored = [];
+  for(var i=0;i<DATA.length;i++){
+    var s = chatScore(DATA[i], query, words);
+    if(s > 0) scored.push({entry:DATA[i], score:s});
+  }
+  scored.sort(function(a,b){ return b.score - a.score; });
+  return scored;
+}
+
+function chatMessagesEl(){ return document.getElementById('chatMessages'); }
+
+function appendChatMsg(sender, html){
+  var wrap = chatMessagesEl();
+  var div = document.createElement('div');
+  div.className = 'chat-msg ' + sender;
+  div.innerHTML = html;
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+  return div;
+}
+
+function composeBotAnswer(entry){
+  var platLabel = PLATFORMS.filter(function(p){return p.id===entry.platform;})[0].label;
+  var html = '<b>' + entry.name + '</b> <span class="chat-tag-mini" style="background:' + PLAT_COLOR[entry.platform] + '">' + platLabel + '</span>';
+  if(entry.kind === 'ticket'){
+    html += '<span class="chat-section-label">What to ask the customer</span>' + entry.infoToCollect.join(', ');
+    html += '<span class="chat-section-label">What to check</span>' + entry.action;
+    html += '<span class="chat-section-label">What to write in the ticket</span>Collected: ' + entry.infoToCollect.join(', ') + '. Checked: ' + entry.action;
+    if(entry.shareMessage){
+      html += '<span class="chat-section-label">What to tell the customer</span><div class="chat-quote">\u201c' + entry.shareMessage + '\u201d</div>';
+    }
+    if(entry.escalateTo && entry.escalateTo.toLowerCase().indexOf('self-resolve') === -1 && entry.escalateTo !== 'None (self-resolve)'){
+      html += '<span class="chat-section-label">If unresolved, escalate to</span>' + entry.escalateTo + (entry.priorityLabel ? ' \u00b7 ' + entry.priorityLabel : '');
+    }
+  } else {
+    html += '<span class="chat-section-label">Overview</span>' + entry.overview;
+    html += '<span class="chat-section-label">Steps</span>' + entry.steps;
+    html += '<span class="chat-section-label">What happens next</span>' + entry.next;
+  }
+  html += '<br><button class="chat-view-btn" data-view-code="' + entry.code + '">View full details \u2192</button>';
+  return html;
+}
+
+function handleChatSend(){
+  var input = document.getElementById('chatInput');
+  var text = input.value.replace(/^\s+|\s+$/g,'');
+  if(!text) return;
+  appendChatMsg('user', text.replace(/</g,'&lt;'));
+  input.value = '';
+
+  var matches = findBestMatches(text);
+  if(matches.length === 0){
+    appendChatMsg('bot', "I couldn't find a matching topic in the DT for that. Log the details in the ticket and escalate per the Escalation Matrix (Level 2 \u2014 Operations) if you're unsure \u2014 and flag the gap to your Support Lead so it gets added. You can also browse the Customer / Vendor / Delivery Partner tabs above.");
+    return;
+  }
+  var top = matches[0];
+  var second = matches[1];
+  if(!second || top.score >= second.score * 1.6 || top.score >= 6){
+    appendChatMsg('bot', composeBotAnswer(top.entry));
+  } else {
+    var html = "I found a few possible matches \u2014 which fits best?";
+    var shown = matches.slice(0,4);
+    for(var i=0;i<shown.length;i++){
+      var e = shown[i].entry;
+      var pl = PLATFORMS.filter(function(p){return p.id===e.platform;})[0].label;
+      html += '<button class="chat-sugg-btn" data-sugg-code="' + e.code + '">' + pl + ' \u00b7 ' + e.name + '</button>';
+    }
+    appendChatMsg('bot', html);
+  }
+}
+
+function wireChatDynamic(){
+  chatMessagesEl().addEventListener('click', function(e){
+    var t = e.target;
+    if(t.classList.contains('chat-view-btn')){
+      goToItem(t.getAttribute('data-view-code'));
+    } else if(t.classList.contains('chat-sugg-btn')){
+      var entry = findEntry(t.getAttribute('data-sugg-code'));
+      if(entry) appendChatMsg('bot', composeBotAnswer(entry));
+    }
+  });
+}
+
+function openChat(){
+  document.getElementById('chatPanel').classList.add('open');
+  if(chatMessagesEl().children.length === 0){
+    appendChatMsg('bot', "Hi! Describe a customer, vendor, or delivery situation in your own words \u2014 e.g. \u201ccustomer says order not received\u201d or \u201chow does a vendor get paid\u201d \u2014 and I'll pull up what to check, what to say, and where to escalate.");
+  }
+  document.getElementById('chatInput').focus();
+}
+
+document.getElementById('chatFab').addEventListener('click', openChat);
+document.getElementById('chatClose').addEventListener('click', function(){
+  document.getElementById('chatPanel').classList.remove('open');
+});
+document.getElementById('chatSend').addEventListener('click', handleChatSend);
+document.getElementById('chatInput').addEventListener('keydown', function(e){
+  if(e.key === 'Enter') handleChatSend();
+  if(e.key === 'Escape'){ document.getElementById('chatPanel').classList.remove('open'); }
+});
+wireChatDynamic();
+
+/* Global shortcuts: "/" focuses search, "Esc" closes chat / clears search */
+document.addEventListener('keydown', function(e){
+  var tag = (document.activeElement && document.activeElement.tagName) || '';
+  var typing = (tag === 'INPUT' || tag === 'TEXTAREA');
+
+  if(e.key === '/' && !typing){
+    e.preventDefault();
+    if(activePlatform === 'home'){
+      activePlatform = 'customer';
+      buildTabs();
+      document.getElementById('homeScreen').style.display = 'none';
+      document.getElementById('statsbar').style.display = 'flex';
+      document.getElementById('chips').style.display = 'flex';
+      sidebar.style.display = 'block';
+      buildSidebar();
+      showWelcome();
+    }
+    searchInput.focus();
+    searchInput.select();
+  }
+
+  if(e.key === 'Escape'){
+    var chatPanel = document.getElementById('chatPanel');
+    if(chatPanel.classList.contains('open')){
+      chatPanel.classList.remove('open');
+      return;
+    }
+    if(document.activeElement === searchInput || searchInput.value){
+      searchInput.value = '';
+      filterSidebar('');
+      showWelcome();
+      searchInput.focus();
+    } else {
+      searchInput.focus();
+    }
+  }
+});
+
+buildTabs();
+buildChips();
+buildSidebar();
+buildStats();
+wireWelcomeCards();
+renderHomeScreen();
+showHome();
+</script>
+</body>
+</html>
+
+
+
+
