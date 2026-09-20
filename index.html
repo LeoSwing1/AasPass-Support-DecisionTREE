@@ -30,9 +30,12 @@
     --plat-vendor:#8A5A2E;
     --plat-delivery:#2E5C8A;
     --shadow: 0 1px 3px rgba(21,74,50,0.08), 0 1px 2px rgba(21,74,50,0.06);
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;height:100%;}
+  #bgShader{position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; display:block;}
   body{
     font-family: -apple-system, "Segoe UI", ui-sans-serif, system-ui, Roboto, Helvetica, Arial, sans-serif;
     background:var(--bg);
@@ -72,32 +75,40 @@
   .search-icon::after{content:""; position:absolute; width:2px; height:8px; background:#A9CEBB; right:-5px; bottom:-6px; transform:rotate(45deg);}
 
   .tabs{
-    display:flex; gap:0; background:#EEF5F0; border-bottom:1px solid var(--border); padding:0 24px;
+    display:flex; gap:0; background:#EEF5F0; border-bottom:1px solid var(--border); padding:0 24px; position:relative;
   }
   .tab{
     padding:12px 20px; font-size:13.5px; font-weight:600; color:var(--gray); cursor:pointer;
     border-bottom:3px solid transparent; display:flex; align-items:center; gap:8px;
-    transition:border-color .15s ease, color .15s ease;
+    transition:color .2s var(--ease);
   }
-  .tab .dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+  .tab .dot{width:8px; height:8px; border-radius:50%; display:inline-block; transition:transform .2s var(--ease);}
+  .tab:hover .dot{transform:scale(1.25);}
   .tab .count{font-weight:400; color:var(--gray-light); font-size:12px; margin-left:2px;}
   .tab:hover{color:var(--primary-dark);}
-  .tab.active{color:var(--primary-dark); border-bottom:3px solid var(--accent);}
+  .tab.active{color:var(--primary-dark);}
+  .tab-indicator{position:absolute; bottom:-1px; height:3px; background:var(--accent); border-radius:2px 2px 0 0; left:0; width:0; transition:left .28s var(--ease), width .28s var(--ease); pointer-events:none;}
 
   .statsbar{display:flex; gap:26px; padding:9px 24px; background:#fff; border-bottom:1px solid var(--border); font-size:12px; color:var(--gray); flex-wrap:wrap;}
   .statsbar b{color:var(--primary-dark); font-weight:700;}
   .statsbar .sep{color:var(--border);}
+  .statsbar .stat-link{cursor:pointer; border-radius:5px; padding:2px 6px; margin:-2px -6px; transition:background .15s var(--ease);}
+  .statsbar .stat-link:hover{background:var(--bg);}
+  .statsbar .stat-link:hover b{color:var(--accent);}
 
   .chips{display:flex; gap:8px; padding:10px 24px; background:#EEF5F0; border-bottom:1px solid var(--border); align-items:center; flex-wrap:wrap;}
   .chips .label{font-size:12px; color:var(--gray); margin-right:4px;}
-  .chip{border:1px solid var(--primary); color:var(--primary-dark); background:#fff; border-radius:999px; padding:5px 13px; font-size:12.5px; font-weight:600; cursor:pointer; margin-right:6px; transition:background .12s ease, color .12s ease;}
+  .chip{border:1px solid var(--primary); color:var(--primary-dark); background:#fff; border-radius:999px; padding:5px 13px; font-size:12.5px; font-weight:600; cursor:pointer; margin-right:6px; transition:background .18s var(--ease), color .18s var(--ease), transform .15s var(--ease);}
+  .chip:active{transform:scale(0.94);}
   .chip:hover{background:var(--primary); color:#fff;}
 
   .layout{display:flex; flex:1; min-height:0;}
   .sidebar{width:310px; min-width:250px; background:var(--panel); border-right:1px solid var(--border); overflow-y:auto; padding:10px 0 30px;}
-  .group-title{font-size:11.5px; font-weight:700; color:var(--primary-dark); padding:14px 18px 6px; letter-spacing:.3px; text-transform:uppercase;}
+  .group-title{font-size:11.5px; font-weight:700; color:var(--primary-dark); padding:14px 18px 2px; letter-spacing:.3px; text-transform:uppercase;}
+  .group-desc{font-size:10.5px; color:var(--gray-light); padding:0 18px 6px; line-height:1.4;}
   .group-title .plat{color:var(--accent); margin-right:5px;}
-  .item{display:flex; align-items:center; gap:0; padding:8px 18px 8px 22px; cursor:pointer; border-left:3px solid transparent; font-size:13.2px;}
+  .item{display:flex; align-items:center; gap:0; padding:8px 18px 8px 22px; cursor:pointer; border-left:3px solid transparent; font-size:13.2px; max-height:40px; opacity:1; overflow:hidden; transition:max-height .22s var(--ease), opacity .18s var(--ease), padding .22s var(--ease), background .15s var(--ease), border-color .15s var(--ease);}
+  .item .label mark{background:#FCE8D5; color:var(--accent); font-weight:700; border-radius:2px; padding:0 1px;}
   .item .kind-dot{width:6px; height:6px; border-radius:50%; margin-right:9px; flex-shrink:0;}
   .item .kind-dot.ticket{background:var(--accent);}
   .item .kind-dot.process{background:var(--primary);}
@@ -106,23 +117,26 @@
   .item .code{font-weight:700; color:var(--primary); min-width:52px; margin-right:8px; font-size:12.5px; display:none;}
   .item .label{color:var(--text);}
   .item .alias-badge{margin-left:8px; font-size:10px; font-weight:700; color:var(--accent); border:1px solid var(--accent); border-radius:4px; padding:1px 5px;}
-  .item.hidden{display:none;}
-  .group.hidden{display:none;}
+  .item.hidden{max-height:0; opacity:0; padding-top:0; padding-bottom:0; pointer-events:none;}
+  .group{max-height:700px; overflow:hidden; transition:max-height .25s var(--ease);}
+  .group.hidden{max-height:0; margin:0; padding:0;}
   .no-results{padding:18px 22px; color:var(--gray); font-size:13.5px; display:none;}
 
-  main{flex:1; overflow-y:auto; padding:30px 40px 60px;}
-  .welcome{max-width:680px; margin-top:30px;}
+  main{flex:1; overflow-y:auto; padding:30px 40px 60px; background:transparent; position:relative; z-index:1;}
+  .welcome{max-width:680px; margin:30px auto 0;}
   .welcome h1{font-family:Georgia, "Cambria", serif; font-size:25px; color:var(--primary-dark); margin-bottom:8px;}
   .welcome p{color:var(--gray); font-size:14.5px; line-height:1.6;}
   .welcome ul{color:var(--gray); font-size:14px; line-height:1.7;}
   .platform-cards{display:flex; gap:14px; margin-top:22px; flex-wrap:wrap;}
-  .pcard{flex:1; min-width:180px; background:#fff; border:1px solid var(--border); border-left:4px solid var(--primary); border-radius:8px; padding:14px 16px; cursor:pointer; transition:box-shadow .15s ease, transform .1s ease;}
+  .pcard{flex:1; min-width:180px; background:#fff; border:1px solid var(--border); border-left:4px solid var(--primary); border-radius:8px; padding:14px 16px; cursor:pointer; transition:box-shadow .2s var(--ease), transform .2s var(--ease);}
   .pcard:hover{box-shadow:var(--shadow); transform:translateY(-1px);}
   .pcard h4{margin:0 0 6px; font-size:14px; color:var(--primary-dark);}
   .pcard p{margin:0; font-size:12.5px; color:var(--gray); line-height:1.5;}
 
-  .card{max-width:780px; display:none; background:#fff; border:1px solid var(--border); border-radius:10px; padding:26px 30px; box-shadow:var(--shadow);}
-  .card.visible{display:block;}
+  .card{max-width:780px; margin:0 auto; display:none; background:#fff; border:1px solid var(--border); border-radius:10px; padding:26px 30px; box-shadow:var(--shadow);}
+  .card.visible{display:block; animation:cardIn .3s var(--ease);}
+  @keyframes cardIn{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+  @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
   .card-head{display:flex; align-items:flex-start; justify-content:space-between; gap:18px; border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:18px;}
   .card-head .code-big{font-size:30px; font-weight:800; color:var(--primary); line-height:1;}
   .card-head .full-name{font-size:15.5px; color:var(--gray); margin-top:4px;}
@@ -146,7 +160,8 @@
 
   .related-wrap{border-top:1px solid var(--border); padding-top:16px; margin-top:6px;}
   .related-wrap h3{font-size:12px; font-weight:700; color:var(--primary-dark); margin:0 0 10px; text-transform:uppercase; letter-spacing:.2px;}
-  .related-pill{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); background:var(--bg); border-radius:999px; padding:6px 13px; font-size:12.5px; color:var(--text); cursor:pointer; margin:0 8px 8px 0; transition:border-color .12s ease, background .12s ease;}
+  .related-pill{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); background:var(--bg); border-radius:999px; padding:6px 13px; font-size:12.5px; color:var(--text); cursor:pointer; margin:0 8px 8px 0; transition:border-color .18s var(--ease), background .18s var(--ease), transform .15s var(--ease);}
+  .related-pill:active{transform:scale(0.95);}
   .related-pill:hover{border-color:var(--primary); background:#E6F1EA;}
   .related-pill .plat-dot{width:7px; height:7px; border-radius:50%; display:inline-block;}
 
@@ -155,7 +170,7 @@
   footer .legend span{display:flex; align-items:center; gap:5px;}
   footer .dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
 
-  .home-screen{display:none; max-width:920px;}
+  .home-screen{display:none; max-width:920px; margin:0 auto;}
   .hero{padding:8px 0 30px;}
   .hero h1{font-family:Georgia,"Cambria",serif; font-size:34px; color:var(--primary-dark); margin:0 0 8px;}
   .hero .tagline{font-family:Georgia,"Cambria",serif; font-style:italic; color:var(--accent); font-size:18px; margin-bottom:14px;}
@@ -186,24 +201,29 @@
   .chat-fab{
     position:fixed; bottom:24px; right:24px; width:58px; height:58px; border-radius:50%;
     background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center;
-    cursor:pointer; box-shadow:0 3px 12px rgba(21,74,50,0.35); z-index:1000; transition:transform .15s ease;
+    cursor:pointer; box-shadow:0 3px 12px rgba(21,74,50,0.35); z-index:1000; transition:transform .2s var(--ease-spring), box-shadow .2s var(--ease);
   }
-  .chat-fab:hover{transform:scale(1.06);}
+  .chat-fab:hover{transform:scale(1.08); box-shadow:0 5px 18px rgba(21,74,50,0.45);}
+  .chat-fab:active{transform:scale(0.95);}
   .chat-fab svg{width:26px; height:26px;}
 
   .chat-panel{
     position:fixed; bottom:94px; right:24px; width:380px; max-width:92vw; height:560px; max-height:75vh;
     background:#fff; border-radius:14px; box-shadow:0 8px 32px rgba(21,74,50,0.28); border:1px solid var(--border);
-    display:none; flex-direction:column; overflow:hidden; z-index:1000;
+    display:flex; flex-direction:column; overflow:hidden; z-index:1000;
+    opacity:0; transform:translateY(16px) scale(0.97); pointer-events:none;
+    transition:opacity .22s var(--ease), transform .26s var(--ease-spring);
+    transform-origin:bottom right;
   }
-  .chat-panel.open{display:flex;}
+  .chat-panel.open{opacity:1; transform:translateY(0) scale(1); pointer-events:auto;}
   .chat-header{background:var(--primary-dark); color:#fff; padding:14px 16px; display:flex; align-items:center; justify-content:space-between;}
   .chat-header .title{font-weight:700; font-size:14.5px;}
   .chat-header .subtitle{font-size:11px; color:#BFE0CE; margin-top:2px;}
   .chat-header .chat-close{cursor:pointer; font-size:20px; line-height:1; opacity:.85; padding:2px 6px;}
   .chat-header .chat-close:hover{opacity:1;}
   .chat-messages{flex:1; overflow-y:auto; padding:14px; background:var(--bg); display:flex; flex-direction:column; gap:10px;}
-  .chat-msg{max-width:88%; font-size:13px; line-height:1.55; padding:10px 13px; border-radius:12px;}
+  .chat-msg{max-width:88%; font-size:13px; line-height:1.55; padding:10px 13px; border-radius:12px; animation:msgIn .22s var(--ease);}
+  @keyframes msgIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
   .chat-msg.user{align-self:flex-end; background:var(--primary); color:#fff; border-bottom-right-radius:3px;}
   .chat-msg.bot{align-self:flex-start; background:#fff; border:1px solid var(--border); color:var(--text); border-bottom-left-radius:3px;}
   .chat-msg.bot b{color:var(--primary-dark);}
@@ -230,6 +250,8 @@
 </head>
 
 <body>
+
+<canvas id="bgShader"></canvas>
 
 <div class="topbar">
   <div class="brand">
@@ -300,6 +322,97 @@
 </div>
 
 <script>
+/* ============ WEBGL BACKGROUND SHADER ============ */
+(function(){
+  var canvas = document.getElementById('bgShader');
+  if(!canvas || !canvas.getContext) return;
+  var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if(!gl) return;
+
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var vsSource =
+    'attribute vec2 aPos;' +
+    'void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }';
+
+  var fsSource =
+    'precision mediump float;' +
+    'uniform vec2 uRes;' +
+    'uniform float uTime;' +
+    'vec3 palette(float t){' +
+    '  vec3 base = vec3(0.965, 0.976, 0.969);' +
+    '  vec3 green = vec3(0.122, 0.435, 0.294);' +
+    '  vec3 terracotta = vec3(0.851, 0.482, 0.247);' +
+    '  vec3 col = mix(base, green, smoothstep(0.15, 0.85, t) * 0.10);' +
+    '  col = mix(col, terracotta, smoothstep(0.75, 1.0, t) * 0.07);' +
+    '  return col;' +
+    '}' +
+    'void main(){' +
+    '  vec2 uv = gl_FragCoord.xy / uRes.xy;' +
+    '  float t = uTime * 0.035;' +
+    '  float wave = sin(uv.x * 2.6 + t) * 0.5 + cos(uv.y * 3.1 - t * 1.4) * 0.5;' +
+    '  wave += sin((uv.x + uv.y) * 4.3 + t * 0.8) * 0.35;' +
+    '  wave += cos((uv.x - uv.y) * 3.7 - t * 0.6) * 0.25;' +
+    '  wave = wave * 0.5 + 0.5;' +
+    '  gl_FragColor = vec4(palette(wave), 1.0);' +
+    '}';
+
+  function compile(type, src){
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){ return null; }
+    return s;
+  }
+  var vs = compile(gl.VERTEX_SHADER, vsSource);
+  var fs = compile(gl.FRAGMENT_SHADER, fsSource);
+  if(!vs || !fs) return;
+
+  var program = gl.createProgram();
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+  if(!gl.getProgramParameter(program, gl.LINK_STATUS)) return;
+  gl.useProgram(program);
+
+  var buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+  var aPos = gl.getAttribLocation(program, 'aPos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+  var uRes = gl.getUniformLocation(program, 'uRes');
+  var uTime = gl.getUniformLocation(program, 'uTime');
+
+  function resize(){
+    var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    canvas.width = Math.floor(window.innerWidth * dpr);
+    canvas.height = Math.floor(window.innerHeight * dpr);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function drawFrame(time){
+    gl.uniform2f(uRes, canvas.width, canvas.height);
+    gl.uniform1f(uTime, time);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  if(reduceMotion){
+    drawFrame(0);
+  } else {
+    var start = null;
+    function loop(ts){
+      if(start === null) start = ts;
+      drawFrame((ts - start) / 1000);
+      window.requestAnimationFrame(loop);
+    }
+    window.requestAnimationFrame(loop);
+  }
+})();
+
 var PLATFORMS = [
   {id:"customer", label:"Customer"},
   {id:"vendor", label:"Vendor"},
@@ -310,6 +423,24 @@ var CATEGORY_ORDER = {
   customer: ["Orders","Vendor & Delivery","Payments","Account & App","General"],
   vendor: ["Onboarding","Catalog & Inventory","Orders","Subscription & Payments","Support Issues","Account Status"],
   delivery: ["Registration","Availability & Assignment","Delivery Execution","Earnings & Payouts","Issues & Safety"]
+};
+
+var CATEGORY_DESC = {
+  "Orders": "Order-status issues from the customer's side — missing, late, wrong, damaged, or cancelled orders.",
+  "Vendor & Delivery": "Complaints about a specific shop or delivery partner, raised by the customer.",
+  "Payments": "Anything touching money — payment failures, COD mismatches, refunds.",
+  "Account & App": "Login, account recovery, and technical app issues.",
+  "General": "Anything that doesn't fit the categories above.",
+  "Onboarding": "Getting a new shop verified and live on AasPass.",
+  "Catalog & Inventory": "Managing what a vendor sells and what's in stock.",
+  "Subscription & Payments": "Vendor billing tiers, settlement, and performance dashboards.",
+  "Support Issues": "Problems a vendor raises about a customer or a delivery partner.",
+  "Account Status": "Suspension, rejection, and voluntary offboarding.",
+  "Registration": "Signing up, getting verified, and choosing a delivery mode.",
+  "Availability & Assignment": "Going online and how orders get matched to a delivery partner.",
+  "Delivery Execution": "Pickup, drop-off, and what to do when something goes wrong mid-delivery.",
+  "Earnings & Payouts": "Wallet balance, COD collection, settlement schedule, and ratings.",
+  "Issues & Safety": "Safety concerns, fraud reporting, and account suspension."
 };
 
 var QUICK_JUMP = ["WIMO","VSUB","DEARN","RF","DFAIL","VORD"];
@@ -699,6 +830,15 @@ var DELIVERY_DATA = [
 var DATA = CUSTOMER_DATA.concat(VENDOR_DATA).concat(DELIVERY_DATA);
 var activePlatform = "customer";
 var searchMode = false;
+var currentQuery = "";
+
+function highlightMatch(text, query){
+  if(!query) return text.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  var esc = text.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  var idx = esc.toLowerCase().indexOf(query.toLowerCase());
+  if(idx === -1) return esc;
+  return esc.slice(0, idx) + '<mark>' + esc.slice(idx, idx+query.length) + '</mark>' + esc.slice(idx+query.length);
+}
 
 var tabsEl = document.getElementById('tabs');
 var chipsEl = document.getElementById('chips');
@@ -722,14 +862,12 @@ function findEntry(code){
 
 function goToPlatform(pid){
   activePlatform = pid;
-  searchInput.value = "";
+  searchInput.value = ""; currentQuery = "";
   searchMode = false;
   buildTabs();
   buildSidebar();
   showWelcome();
-  document.getElementById('statsbar').style.display = 'flex';
-  document.getElementById('chips').style.display = 'flex';
-  sidebar.style.display = 'block';
+  ensureBrowsingView();
 }
 
 function renderHomeScreen(){
@@ -824,6 +962,53 @@ function buildTabs(){
     })(p.id);
     tabsEl.appendChild(tab);
   }
+  var indicator = document.createElement('div');
+  indicator.className = 'tab-indicator';
+  indicator.id = 'tabIndicator';
+  tabsEl.appendChild(indicator);
+  requestAnimationFrame(positionTabIndicator);
+}
+
+function positionTabIndicator(){
+  var active = tabsEl.querySelector('.tab.active');
+  var indicator = document.getElementById('tabIndicator');
+  if(!active || !indicator) return;
+  indicator.style.left = active.offsetLeft + 'px';
+  indicator.style.width = active.offsetWidth + 'px';
+}
+window.addEventListener('resize', function(){ requestAnimationFrame(positionTabIndicator); });
+
+function ensureBrowsingView(){
+  document.getElementById('homeScreen').style.display = 'none';
+  document.getElementById('statsbar').style.display = 'flex';
+  document.getElementById('chips').style.display = 'flex';
+  sidebar.style.display = 'block';
+}
+
+function filterByPredicate(predicate, label){
+  ensureBrowsingView();
+  searchInput.value = '';
+  searchMode = true;
+  buildSidebar();
+  var anyVisible = false;
+  var groups = document.querySelectorAll('.group');
+  for(var g=0; g<groups.length; g++){
+    var group = groups[g];
+    var groupHasVisible = false;
+    var items = group.querySelectorAll('.item');
+    for(var i=0;i<items.length;i++){
+      var item = items[i];
+      var entry = findEntry(item.getAttribute('data-code'));
+      var show = predicate(entry);
+      if(show){ item.classList.remove('hidden'); groupHasVisible = true; anyVisible = true; }
+      else { item.classList.add('hidden'); }
+    }
+    if(groupHasVisible){ group.classList.remove('hidden'); } else { group.classList.add('hidden'); }
+  }
+  var nr = document.getElementById('noResults');
+  if(nr) nr.style.display = anyVisible ? 'none' : 'block';
+  showWelcome();
+  if(label){ welcome.querySelector('h1').textContent = label; }
 }
 
 function buildStats(){
@@ -837,9 +1022,24 @@ function buildStats(){
   statsEl.innerHTML =
     '<span><b>' + DATA.length + '</b> topics across <b>3</b> platforms</span>' +
     '<span class="sep">|</span>' +
-    '<span><b>' + tickets + '</b> support tickets \u00b7 <b>' + processes + '</b> how-to guides</span>' +
+    '<span class="stat-link" id="statTickets"><b>' + tickets + '</b> support tickets</span> \u00b7 ' +
+    '<span class="stat-link" id="statProcesses"><b>' + processes + '</b> how-to guides</span>' +
     '<span class="sep">|</span>' +
-    '<span><b>' + statusCount.confirmed + '</b> confirmed from source \u00b7 <b>' + (statusCount.proposed+statusCount.optional+statusCount.tbd+statusCount.legal) + '</b> flagged for review</span>';
+    '<span class="stat-link" id="statConfirmed"><b>' + statusCount.confirmed + '</b> confirmed from source</span> \u00b7 ' +
+    '<span class="stat-link" id="statFlagged"><b>' + (statusCount.proposed+statusCount.optional+statusCount.tbd+statusCount.legal) + '</b> flagged for review</span>';
+
+  document.getElementById('statTickets').addEventListener('click', function(){
+    filterByPredicate(function(e){ return e.kind === 'ticket'; }, 'All support tickets, across every platform');
+  });
+  document.getElementById('statProcesses').addEventListener('click', function(){
+    filterByPredicate(function(e){ return e.kind === 'process'; }, 'All how-to guides, across every platform');
+  });
+  document.getElementById('statConfirmed').addEventListener('click', function(){
+    filterByPredicate(function(e){ return e.status === 'confirmed'; }, 'Topics confirmed directly from the source documents');
+  });
+  document.getElementById('statFlagged').addEventListener('click', function(){
+    filterByPredicate(function(e){ return e.status !== 'confirmed'; }, 'Topics flagged for review (PROPOSED / OPTIONAL / TBD / LEGAL)');
+  });
 }
 
 function wireWelcomeCards(){
@@ -863,7 +1063,7 @@ function buildChips(){
         var entry = findEntry(c);
         if(entry){
           activePlatform = entry.platform;
-          searchInput.value = "";
+          searchInput.value = ""; currentQuery = "";
           searchMode = false;
           buildTabs();
           buildSidebar();
@@ -893,6 +1093,7 @@ function buildSidebar(){
       group.setAttribute('data-cat', pid + '|' + cat);
       var title = document.createElement('div');
       title.className = 'group-title';
+      if(CATEGORY_DESC[cat]){ title.title = CATEGORY_DESC[cat]; }
       if(searchMode){
         var platLabel = PLATFORMS.filter(function(p){return p.id===pid;})[0].label;
         title.innerHTML = '<span class="plat">' + platLabel + ' \u00b7</span>' + cat;
@@ -900,6 +1101,12 @@ function buildSidebar(){
         title.textContent = cat;
       }
       group.appendChild(title);
+      if(CATEGORY_DESC[cat]){
+        var desc = document.createElement('div');
+        desc.className = 'group-desc';
+        desc.textContent = CATEGORY_DESC[cat];
+        group.appendChild(desc);
+      }
       for(var j=0;j<groupItems.length;j++){
         var d = groupItems[j];
         var item = document.createElement('div');
@@ -910,7 +1117,8 @@ function buildSidebar(){
         item.appendChild(kindDot);
         var labelSpan = document.createElement('span');
         labelSpan.className = 'label';
-        labelSpan.textContent = d.name;
+        if(searchMode && currentQuery){ labelSpan.innerHTML = highlightMatch(d.name, currentQuery); }
+        else { labelSpan.textContent = d.name; }
         item.appendChild(labelSpan);
         if(d.alias){
           var aliasSpan = document.createElement('span');
@@ -949,6 +1157,8 @@ var TAT_BY_PRIORITY = {
 
 function renderCard(entry){
   welcome.style.display = 'none';
+  card.classList.remove('visible');
+  void card.offsetWidth;
   card.classList.add('visible');
   var platLabel = PLATFORMS.filter(function(p){return p.id===entry.platform;})[0].label;
   var html = '';
@@ -1015,7 +1225,7 @@ function goToItem(code){
   sidebar.style.display = 'block';
   if(entry.platform !== activePlatform || searchMode){
     activePlatform = entry.platform;
-    searchInput.value = "";
+    searchInput.value = ""; currentQuery = "";
     searchMode = false;
     buildTabs();
     buildSidebar();
@@ -1037,7 +1247,7 @@ function wireCardLinks(){
         var parts = el.getAttribute('data-goto-category').split('|');
         var pid = parts[0], cat = parts[1];
         activePlatform = pid;
-        searchInput.value = "";
+        searchInput.value = ""; currentQuery = "";
         searchMode = false;
         buildTabs();
         buildSidebar();
@@ -1066,6 +1276,7 @@ function selectItem(code){
 
 function showWelcome(){
   welcome.style.display = 'block';
+  welcome.querySelector('h1').textContent = 'Search, or pick a query from the left';
   card.classList.remove('visible');
   card.innerHTML = '';
 }
@@ -1084,6 +1295,7 @@ function matches(entry, q){
 
 function filterSidebar(q){
   searchMode = (q.length > 0);
+  currentQuery = q;
   buildSidebar();
   var anyVisible = false;
   var firstMatchCode = null;
