@@ -2,23 +2,8 @@
 
 A searchable, self-contained support decision tree for AasPass — covering the **Customer**, **Vendor**, and **Delivery Partner** platforms in one tool, plus a home screen and a built-in keyword search assistant.
 
-**Live site (after you enable Pages — see below):**
-`https://<your-username>.github.io/<this-repo-name>/`
-
----
-
 ## ⚠️ If you're seeing this README instead of the tool
-
-That's expected — **GitHub always shows `README.md` on the repository's main page.** That page (`github.com/<you>/<repo>`) is never the live site.
-
 The actual live site is served from `index.html` at a **different URL**:
-
-```
-https://<your-username>.github.io/<repo-name>/
-```
-
-If that URL isn't working yet, it's almost always because GitHub Pages hasn't been turned on for this repo. Fix it in under a minute:
-
 ## How to enable GitHub Pages
 
 1. Push this folder's contents to a GitHub repository (root of the repo — `index.html` should sit at the top level, not inside a subfolder, unless you configure Pages to use that subfolder).
